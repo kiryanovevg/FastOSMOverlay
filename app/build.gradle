@@ -9,6 +9,7 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        multiDexEnabled true
     }
 
     buildTypes {
@@ -23,6 +24,7 @@ android {
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/NOTICE'
     }
+
     compileOptions {
         targetCompatibility 1.8
         sourceCompatibility 1.8
@@ -33,6 +35,13 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.android.support:appcompat-v7:27.1.1'
     implementation 'com.android.support.constraint:constraint-layout:1.1.2'
+    implementation 'com.android.support:multidex:1.0.3'
 
     implementation 'com.esri.arcgisruntime:arcgis-android:100.3.0'
+
+    implementation 'org.geotools:gt-main:19-SNAPSHOT'
+//    implementation 'org.geotools:gt-shapefile:19-SNAPSHOT'
+
+    // https://mvnrepository.com/artifact/org.geotools/gt-main
+//    compile group: 'org.geotools', name: 'gt-shapefile', version: '20-SNAPSHOT'
 }

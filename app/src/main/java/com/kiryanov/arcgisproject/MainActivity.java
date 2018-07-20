@@ -29,8 +29,6 @@ public class MainActivity extends AppCompatActivity {
     private Button addPolygonBtn;
     private Button addMarkerBtn;
 
-    private double offset = 0;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,35 +56,33 @@ public class MainActivity extends AppCompatActivity {
         mapView.getGraphicsOverlays().add(overlay);
     }
 
+    private double polygonOffset = 0;
     private void addPolygons() {
         int count = 100;
 
+        SimpleFillSymbol fillSymbol = new SimpleFillSymbol(
+                SimpleFillSymbol.Style.CROSS, Color.BLUE, null
+        );
+
+        PointCollection points = new PointCollection(SpatialReferences.getWgs84());
+
+        points.add(39.6, 47.2);
         for (int i = 0; i < count; i++) {
-
-            SimpleFillSymbol fillSymbol = new SimpleFillSymbol(
-                    SimpleFillSymbol.Style.CROSS, Color.BLUE, null
-            );
-
-            PointCollection points = new PointCollection(SpatialReferences.getWgs84());
-
-            points.add(47 + offset, 39 + offset);
-            for (double j = 0.01; j < 1; j++) {
-                points.add(47 + j + offset, 39 + j + offset);
-            }
-            points.add(47 + offset, 39 + offset);
-
-
-            Polygon polygon = new Polygon(points);
-            overlay.getGraphics().add(new Graphic(polygon, fillSymbol));
-
-            offset += 0.2;
+            double offset = ((double) i) / count;
+            points.add(39.6 + offset, 47.2 + offset);
         }
+        points.add(39.6, 47.2);
+
+        Polygon polygon = new Polygon(points);
+        overlay.getGraphics().add(new Graphic(polygon, fillSymbol));
+
+        polygonOffset += 0.2;
 
         addPolygonBtn.setText(
                 String.valueOf(Integer.parseInt(addPolygonBtn.getText().toString()) + count)
         );
 
-        if (offset > 80) offset = -80;
+        if (polygonOffset > 80) polygonOffset = -80;
     }
 
     private double markerOffset = 0;

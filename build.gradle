@@ -17,11 +17,21 @@ buildscript {
 
 allprojects {
     repositories {
-        google()
-        jcenter()
         maven {
             url 'https://esri.bintray.com/arcgis'
         }
+        maven {
+            url 'http://download.osgeo.org/webdav/geotools/'
+        }
+        maven {
+            url 'http://download.java.net/maven/2'
+        }
+        maven {
+            url 'http://repo.boundlessgeo.com/main'
+        }
+
+        google()
+        jcenter()
     }
 }
 

@@ -4,7 +4,16 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 
-public class MainActivity extends AppCompatActivity {
+import com.mapbox.mapboxsdk.annotations.Icon;
+import com.mapbox.mapboxsdk.annotations.IconFactory;
+import com.mapbox.mapboxsdk.maps.MapView;
+import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
+
+    private MapView mapView;
+    private MapboxMap mapboxMap;
 
     private Button addPolygonBtn;
     private Button addMarkerBtn;
@@ -15,26 +24,37 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        initMapView();
+        initMapView(savedInstanceState);
 
-        addPolygonBtn = findViewById(R.id.add_polygon);
         addMarkerBtn = findViewById(R.id.add_marker);
+        addPolygonBtn = findViewById(R.id.add_polygon);
         addGeoJsonBtn = findViewById(R.id.from_geo_json);
 
-        addPolygonBtn.setOnClickListener(v -> addPolygons());
         addMarkerBtn.setOnClickListener(v -> addMarkers());
+        addPolygonBtn.setOnClickListener(v -> addPolygons());
         addGeoJsonBtn.setOnClickListener(v -> addFromGeoJson());
     }
 
-    private void initMapView() {
-
+    private void initMapView(Bundle savedInstanceState) {
+        mapView = findViewById(R.id.map_view);
+        mapView.onCreate(savedInstanceState);
+        mapView.getMapAsync(this);
     }
 
-    private void addPolygons() {
-
+    @Override
+    public void onMapReady(MapboxMap mapboxMap) {
+        this.mapboxMap = mapboxMap;
     }
 
     private void addMarkers() {
+        Icon icon = IconFactory.getInstance(this).fromResource(R.drawable.ic_launcher_foreground);
+
+        for (int i = 0; i < ; i++) {
+
+        }
+    }
+
+    private void addPolygons() {
 
     }
 
@@ -50,16 +70,19 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onResume() {
+        mapView.onResume();
         super.onResume();
     }
 
     @Override
     protected void onPause() {
+        mapView.onPause();
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
+        mapView.onDestroy();
         super.onDestroy();
     }
 }

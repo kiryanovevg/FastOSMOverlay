@@ -1,14 +1,22 @@
 package com.kiryanov.arcgisproject;
 
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
+import com.mapbox.geojson.Polygon;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
@@ -19,6 +27,7 @@ import com.mapbox.mapboxsdk.style.layers.LineLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonOptions;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -96,23 +105,69 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         setButtonText(addMarkerBtn, count);
     }
 
+    double polygonOffsetX = 0;
+    double polygonOffsetY = 0;
     private void addPolygons() {
-        String geoJson = "{\n" +
-                "  \"type\": \"FeatureCollection\",\n" +
-                "  \"features\": [\n" +
-                "    {\n" +
-                "      \"type\": \"Feature\",\n" +
-                "      \"properties\": {},\n" +
-                "      \"geometry\": {\n" +
-                "        \"type\": \"Point\",\n" +
-                "        \"coordinates\": [\n" +
-                "          40.10009765625,\n" +
-                "          47.2307596483469\n" +
-                "        ]\n" +
-                "      }\n" +
-                "    }\n" +
-                "  ]\n" +
-                "}";
+        Handler handler = new Handler(getMainLooper());
+        int count = 100;
+
+        new Thread(() -> {
+            for (int i = 0; i < count; i++) {
+                List<LatLng> points = new ArrayList<>();
+                parseGeoJson(getString(R.string.geo_json_1), points);
+
+                int color = i % 2 == 0 ? Color.BLUE : Color.RED;
+
+                handler.post(() -> {
+                    mapboxMap.addPolygon(new PolygonOptions()
+                            .addAll(points)
+                            .fillColor(color)
+                    );
+
+                    polygonOffsetX += 0.1;
+
+                    setButtonText(addPolygonBtn, 1);
+                });
+            }
+
+            handler.post(() -> {
+                polygonOffsetX = 0;
+                polygonOffsetY += 0.3;
+            });
+        }).start();
+    }
+
+    private void parseGeoJson(String geoJson, List<LatLng> points) {
+        JsonObject object = new JsonParser().parse(geoJson).getAsJsonObject();
+        JsonArray features = object.getAsJsonArray("features");
+
+        for (JsonElement fe : features) {
+            JsonObject fo = fe.getAsJsonObject();
+
+            JsonArray coordinates = fo
+                    .getAsJsonObject("geometry")
+                    .getAsJsonArray("coordinates")
+                    .get(0).getAsJsonArray();
+
+            for (JsonElement element : coordinates)
+                addPoint(element, points);
+            addPoint(coordinates.get(0), points);
+
+        }
+    }
+
+    private void addPoint(JsonElement element, List<LatLng> points) {
+        JsonArray coord = element.getAsJsonArray();
+
+        JsonElement first = coord.get(0);
+        JsonElement second = coord.get(1);
+
+        if (first.isJsonPrimitive() && second.isJsonPrimitive()) {
+            points.add(new LatLng(
+                    second.getAsDouble() + polygonOffsetY,
+                    first.getAsDouble() + polygonOffsetX)
+            );
+        }
     }
 
     private void addFromGeoJson() {

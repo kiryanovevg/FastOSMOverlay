@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -174,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
                     addPoint(coordinates.get(0), points);
 
                     SimpleFillSymbol fillSymbol = new SimpleFillSymbol(
-                            SimpleFillSymbol.Style.DIAGONAL_CROSS,
+                            SimpleFillSymbol.Style.SOLID,
                             i % 2 == 0 ? Color.RED : Color.BLUE,
                             null
                     );

@@ -1,44 +1,40 @@
 package com.kiryanov.arcgisproject;
 
+import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.widget.Button;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import org.osmdroid.bonuspack.kml.KmlDocument;
-import org.osmdroid.bonuspack.kml.KmlFeature;
-import org.osmdroid.bonuspack.kml.KmlLineString;
-import org.osmdroid.bonuspack.kml.KmlPlacemark;
-import org.osmdroid.bonuspack.kml.KmlPoint;
-import org.osmdroid.bonuspack.kml.KmlPolygon;
-import org.osmdroid.bonuspack.kml.KmlTrack;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
-import org.osmdroid.views.overlay.FolderOverlay;
-import org.osmdroid.views.overlay.Marker;
-import org.osmdroid.views.overlay.Overlay;
-import org.osmdroid.views.overlay.Polygon;
 import org.osmdroid.views.overlay.Polyline;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class SecondActivity extends AppCompatActivity {
 
     private static final double LAT = 47.2;
     private static final double LNG = 39.7;
 
     private MapView mapView;
-    private FolderOverlay mainFolder;
+
+    private Button addPolygonBtn;
+    private Button addMarkerBtn;
+    private Button addGeoJsonBtn;
+
+    private List<GeoPoint> routeGeoPoints;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,39 +43,33 @@ public class MainActivity extends AppCompatActivity {
 
         initMapView(savedInstanceState);
 
-//        geoPoints = new ArrayList<>();
-//        parseGeoJson(getString(R.string.geo_json_1), geoPoints);
+        addMarkerBtn = findViewById(R.id.add_marker);
+        addPolygonBtn = findViewById(R.id.add_polygon);
+        addGeoJsonBtn = findViewById(R.id.from_geo_json);
 
-        KmlFeature.Styler styler = new KmlFeature.Styler() {
-            @Override
-            public void onFeature(Overlay overlay, KmlFeature kmlFeature) {
+//        addMarkerBtn.setOnClickListener(v -> addMarkers());
+//        addPolygonBtn.setOnClickListener(v -> addPolygons());
+//        addGeoJsonBtn.setOnClickListener(v -> addFromGeoJson());
 
-            }
+        routeGeoPoints = new ArrayList<>();
+//        parseGeoJson(getString(R.string.geo_json_simple), routeGeoPoints);
 
-            @Override
-            public void onPoint(Marker marker, KmlPlacemark kmlPlacemark, KmlPoint kmlPoint) {
+        double offset = 0;
+        for (int i = 0; i < 10000; i++) {
+            routeGeoPoints.add(new GeoPoint(
+                    LAT + offset,
+                    LNG + offset
+            ));
 
-            }
+            offset += 0.05;
+        }
 
-            @Override
-            public void onLineString(Polyline polyline, KmlPlacemark kmlPlacemark, KmlLineString kmlLineString) {
+        /*pathOverlay = new Polyline(mapView);
+        pathOverlay.setPoints(routeGeoPoints);
+        pathOverlay.setColor(Color.CYAN);
+        mapView.getOverlays().add(pathOverlay);
+        mapView.invalidate();*/
 
-            }
-
-            @Override
-            public void onPolygon(Polygon polygon, KmlPlacemark kmlPlacemark, KmlPolygon kmlPolygon) {
-                polygon.setFillColor(Color.BLUE);
-            }
-
-            @Override
-            public void onTrack(Polyline polyline, KmlPlacemark kmlPlacemark, KmlTrack kmlTrack) {
-
-            }
-        };
-        KmlDocument kmlDocument = new KmlDocument();
-        kmlDocument.parseGeoJSON(getString(R.string.geo_json_1));
-        mainFolder = (FolderOverlay) kmlDocument.mKmlRoot
-                .buildOverlay(mapView, null, styler, kmlDocument);
     }
 
     private void initMapView(Bundle savedInstanceState) {
@@ -112,33 +102,44 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void simplePolygon(final MapView osmMap) {
-
-    }
-
-    private Polygon pathOverlay = null;
+    private int MAX_POINTS = 150;
+    private Polyline pathOverlay = null;
     private void updateRoute(final MapView osmMap, final int color){
         updateThread = new Thread(() -> {
-            final ArrayList<GeoPoint> zoomPoints = new ArrayList<>(geoPoints);
-            int MAX_POINTS = 1000;
+            final ArrayList<GeoPoint> zoomPoints = new ArrayList<>(routeGeoPoints);
 
             //Remove any points that are offscreen
             removeHiddenPoints(osmMap, zoomPoints);
 
             //If there's still too many then thin the array
-            if (zoomPoints.size() > MAX_POINTS){
-                simpleOverlay(zoomPoints, MAX_POINTS);
+            if(zoomPoints.size() > MAX_POINTS){
+                int stepSize = (int) zoomPoints.size()/MAX_POINTS;
+                int count = 1;
+                for (Iterator<GeoPoint> iterator = zoomPoints.iterator(); iterator.hasNext();) {
+                    iterator.next();
+
+                    if(count != stepSize){
+                        iterator.remove();
+                    }else{
+                        count = 0;
+                    }
+
+                    count++;
+                }
             }
 
             //Update the map on the event thread
-            osmMap.post(() -> {
-                //ideally the Polyline construction would happen in the thread but that causes glitches while the event thread
-                //waits for redraw:
-                osmMap.getOverlays().remove(pathOverlay);
-                pathOverlay = new Polygon(osmMap);
-                pathOverlay.setPoints(zoomPoints);
-                osmMap.getOverlayManager().add(pathOverlay);
-                osmMap.invalidate();
+            osmMap.post(new Runnable() {
+                public void run() {
+                    //ideally the Polyline construction would happen in the thread but that causes glitches while the event thread
+                    //waits for redraw:
+                    osmMap.getOverlays().remove(pathOverlay);
+                    pathOverlay = new Polyline(osmMap);
+                    pathOverlay.setPoints(zoomPoints);
+                    pathOverlay.setColor(color);
+                    osmMap.getOverlays().add(pathOverlay);
+                    osmMap.invalidate();
+                }
             });
         });
         updateThread.start();
@@ -150,31 +151,11 @@ public class MainActivity extends AppCompatActivity {
         for (Iterator<GeoPoint> iterator = zoomPoints.iterator(); iterator.hasNext();) {
             GeoPoint point = iterator.next();
 
-            boolean inLatitude = point.getLatitude() < bounds.getLatNorth() &&
-                    point.getLatitude() > bounds.getLatSouth();
-
-            boolean inLongitude = point.getLongitude() < bounds.getLonEast() &&
-                    point.getLongitude() > bounds.getLonWest();
-
+            boolean inLongitude = point.getLatitude() < bounds.getCenterLatitude() && point.getLatitude() > bounds.getCenterLatitude();
+            boolean inLatitude = point.getLongitude() > bounds.getCenterLongitude() && point.getLongitude() < bounds.getCenterLongitude();
             if(!inLongitude || !inLatitude){
                 iterator.remove();
             }
-        }
-    }
-
-    private void simpleOverlay(ArrayList<GeoPoint> zoomPoints, int maxPoints) {
-        int stepSize = (int) zoomPoints.size() / maxPoints;
-        int count = 1;
-        for (Iterator<GeoPoint> iterator = zoomPoints.iterator(); iterator.hasNext();) {
-            iterator.next();
-
-            if(count != stepSize){
-                iterator.remove();
-            }else{
-                count = 0;
-            }
-
-            count++;
         }
     }
 
@@ -205,8 +186,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (first.isJsonPrimitive() && second.isJsonPrimitive()) {
             points.add(new GeoPoint(
-                    second.getAsDouble(),
-                    first.getAsDouble()
+                    first.getAsDouble(),
+                    second.getAsDouble()
             ));
         }
     }

@@ -2,7 +2,6 @@ package com.kiryanov.arcgisproject;
 
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 
@@ -12,20 +11,23 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
-import com.mapbox.geojson.Polygon;
+import com.mapbox.geojson.LineString;
+import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
-import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+import com.mapbox.mapboxsdk.style.layers.BackgroundLayer;
 import com.mapbox.mapboxsdk.style.layers.FillLayer;
 import com.mapbox.mapboxsdk.style.layers.LineLayer;
-import com.mapbox.mapboxsdk.style.sources.GeoJsonOptions;
+import com.mapbox.mapboxsdk.style.layers.Property;
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
+import com.mapbox.mapboxsdk.style.sources.Source;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +40,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private MapView mapView;
     private MapboxMap mapboxMap;
+
+    private List<Point> routeCoordinates;
 
     private Button addPolygonBtn;
     private Button addMarkerBtn;
@@ -75,6 +79,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .build()
         );
 
+        routeCoordinates = new ArrayList<>();
+        parseGeoJson(getString(R.string.geo_json_2), routeCoordinates);
+
+        LineString lineString = LineString.fromLngLats(routeCoordinates);
+        FeatureCollection featureCollection =
+                FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(lineString)});
+        Source geoJsonSource = new GeoJsonSource("line-source", featureCollection);
+        mapboxMap.addSource(geoJsonSource);
     }
 
     private double markerOffset = 0;
@@ -108,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     double polygonOffsetX = 0;
     double polygonOffsetY = 0;
     private void addPolygons() {
-        Handler handler = new Handler(getMainLooper());
+        /*Handler handler = new Handler(getMainLooper());
         int count = 100;
 
         new Thread(() -> {
@@ -134,10 +146,29 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 polygonOffsetX = 0;
                 polygonOffsetY += 0.3;
             });
-        }).start();
+        }).start();*/
+
+        for (int i = 0; i < 100; i++) {
+            FillLayer lineLayer = new FillLayer("linelayer" + polygonOffsetX, "line-source");
+
+            // The layer properties for our line. This is where we make the line dotted, set the
+            // color, etc.
+            lineLayer.setProperties(
+                    PropertyFactory.lineDasharray(new Float[]{2f, 2f}),
+                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+                    PropertyFactory.lineWidth(5f),
+                    PropertyFactory.lineColor(Color.parseColor("#e55e5e"))
+            );
+
+            mapboxMap.addLayer(lineLayer);
+            polygonOffsetX += 0.1;
+
+            setButtonText(addPolygonBtn, 1);
+        }
     }
 
-    private void parseGeoJson(String geoJson, List<LatLng> points) {
+    private void parseGeoJson(String geoJson, List<Point> points) {
         JsonObject object = new JsonParser().parse(geoJson).getAsJsonObject();
         JsonArray features = object.getAsJsonArray("features");
 
@@ -156,17 +187,21 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private void addPoint(JsonElement element, List<LatLng> points) {
+    private void addPoint(JsonElement element, List<Point> points) {
         JsonArray coord = element.getAsJsonArray();
 
         JsonElement first = coord.get(0);
         JsonElement second = coord.get(1);
 
         if (first.isJsonPrimitive() && second.isJsonPrimitive()) {
-            points.add(new LatLng(
+            /*points.add(new LatLng(
                     second.getAsDouble() + polygonOffsetY,
                     first.getAsDouble() + polygonOffsetX)
-            );
+            );*/
+            points.add(Point.fromLngLat(
+                    second.getAsDouble() + polygonOffsetY,
+                    first.getAsDouble() + polygonOffsetX
+            ));
         }
     }
 

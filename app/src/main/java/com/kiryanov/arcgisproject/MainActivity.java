@@ -1,19 +1,22 @@
 package com.kiryanov.arcgisproject;
 
+import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
+import org.osmdroid.events.MapListener;
+import org.osmdroid.events.ScrollEvent;
+import org.osmdroid.events.ZoomEvent;
+import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.Polyline;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
     private Button addMarkerBtn;
     private Button addGeoJsonBtn;
 
+    private List<GeoPoint> routeGeoPoints;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,9 +42,12 @@ public class MainActivity extends AppCompatActivity {
         addPolygonBtn = findViewById(R.id.add_polygon);
         addGeoJsonBtn = findViewById(R.id.from_geo_json);
 
-        addMarkerBtn.setOnClickListener(v -> addMarkers());
-        addPolygonBtn.setOnClickListener(v -> addPolygons());
-        addGeoJsonBtn.setOnClickListener(v -> addFromGeoJson());
+//        addMarkerBtn.setOnClickListener(v -> addMarkers());
+//        addPolygonBtn.setOnClickListener(v -> addPolygons());
+//        addGeoJsonBtn.setOnClickListener(v -> addFromGeoJson());
+
+        routeGeoPoints = new ArrayList<>();
+
     }
 
     private void initMapView(Bundle savedInstanceState) {
@@ -49,107 +57,84 @@ public class MainActivity extends AppCompatActivity {
 
         mapView.getController().setZoom(10d);
         mapView.getController().setCenter(new GeoPoint(LAT, LNG));
-    }
 
-    private double markerOffset = 0;
-    private void addMarkers() {
-        int count = 1000;
-
-        Random random = new Random();
-        int accuracy = 1000000;
-        double density = 0.5;
-
-        for (int i = 0; i < count; i++) {
-            double dispersionX = getDispersion(random.nextInt(), accuracy, density);
-            double dispersionY = getDispersion(random.nextInt(), accuracy, density);
-
-            //TODO
-        }
-
-        if (markerOffset > 80) markerOffset = -80;
-        markerOffset += density;
-
-        setButtonText(addMarkerBtn, count);
-    }
-
-    double polygonOffsetX = 0;
-    double polygonOffsetY = 0;
-    private void addPolygons() {
-        /*Handler handler = new Handler(getMainLooper());
-        int count = 100;
-
-        new Thread(() -> {
-            for (int i = 0; i < count; i++) {
-                List<LatLng> points = new ArrayList<>();
-                parseGeoJson(getString(R.string.geo_json_1), points);
-
-                int color = i % 2 == 0 ? Color.BLUE : Color.RED;
-
-                handler.post(() -> {
-                    mapboxMap.addPolygon(new PolygonOptions()
-                            .addAll(points)
-                            .fillColor(color)
-                    );
-
-                    polygonOffsetX += 0.1;
-
-                    setButtonText(addPolygonBtn, 1);
-                });
+        mapView.addMapListener(new MapListener() {
+            @Override
+            public boolean onScroll(ScrollEvent event) {
+                drawRoute(mapView, Color.RED);
+                return false;
             }
 
-            handler.post(() -> {
-                polygonOffsetX = 0;
-                polygonOffsetY += 0.3;
+            @Override
+            public boolean onZoom(ZoomEvent event) {
+                drawRoute(mapView, Color.BLUE);
+                return false;
+            }
+        });
+    }
+
+    private Thread updateThread = null;
+    public void drawRoute(final MapView osmMap, final int color){
+        if(updateThread == null || !updateThread.isAlive()) {
+            updateRoute(osmMap, color);
+        }
+    }
+
+    private int MAX_POINTS = 150;
+    private Polyline pathOverlay = null;
+    private void updateRoute(final MapView osmMap, final int color){
+        updateThread = new Thread(() -> {
+            final ArrayList<GeoPoint> zoomPoints = new ArrayList<>(routeGeoPoints);
+
+            //Remove any points that are offscreen
+            removeHiddenPoints(osmMap, zoomPoints);
+
+            //If there's still too many then thin the array
+            if(zoomPoints.size() > MAX_POINTS){
+                int stepSize = (int) zoomPoints.size()/MAX_POINTS;
+                int count = 1;
+                for (Iterator<GeoPoint> iterator = zoomPoints.iterator(); iterator.hasNext();) {
+                    iterator.next();
+
+                    if(count != stepSize){
+                        iterator.remove();
+                    }else{
+                        count = 0;
+                    }
+
+                    count++;
+                }
+            }
+
+            //Update the map on the event thread
+            osmMap.post(new Runnable() {
+                public void run() {
+                    //ideally the Polyline construction would happen in the thread but that causes glitches while the event thread
+                    //waits for redraw:
+                    osmMap.getOverlays().remove(pathOverlay);
+                    pathOverlay = new Polyline(osmMap);
+                    pathOverlay.setPoints(zoomPoints);
+                    pathOverlay.setColor(color);
+                    osmMap.getOverlays().add(pathOverlay);
+                    osmMap.invalidate();
+                }
             });
-        }).start();*/
+        });
+        updateThread.start();
     }
 
-    private void parseGeoJson(String geoJson, List<GeoPoint> points) {
-        JsonObject object = new JsonParser().parse(geoJson).getAsJsonObject();
-        JsonArray features = object.getAsJsonArray("features");
+    private void removeHiddenPoints(MapView osmMap, ArrayList<GeoPoint> zoomPoints){
+        BoundingBox bounds = osmMap.getBoundingBox();
 
-        for (JsonElement fe : features) {
-            JsonObject fo = fe.getAsJsonObject();
+        for (Iterator<GeoPoint> iterator = zoomPoints.iterator(); iterator.hasNext();) {
+            GeoPoint point = iterator.next();
 
-            JsonArray coordinates = fo
-                    .getAsJsonObject("geometry")
-                    .getAsJsonArray("coordinates")
-                    .get(0).getAsJsonArray();
-
-            for (JsonElement element : coordinates)
-                addPoint(element, points);
-            addPoint(coordinates.get(0), points);
-
+            boolean inLongitude = point.getLatitude() < bounds.getCenterLatitude() && point.getLatitude() > bounds.getCenterLatitude();
+            boolean inLatitude = point.getLongitude() > bounds.getCenterLongitude() && point.getLongitude() < bounds.getCenterLongitude();
+            if(!inLongitude || !inLatitude){
+                iterator.remove();
+            }
         }
-    }
-
-    private void addPoint(JsonElement element, List<GeoPoint> points) {
-        JsonArray coord = element.getAsJsonArray();
-
-        JsonElement first = coord.get(0);
-        JsonElement second = coord.get(1);
-
-        if (first.isJsonPrimitive() && second.isJsonPrimitive()) {
-            points.add(new GeoPoint(
-                    first.getAsDouble() + polygonOffsetX,
-                    second.getAsDouble() + polygonOffsetY
-            ));
-        }
-    }
-
-    private void addFromGeoJson() {
-
-    }
-
-    private void setButtonText(Button btn, int addable) {
-        btn.setText(
-                String.valueOf(Integer.parseInt(btn.getText().toString()) + addable)
-        );
-    }
-
-    //X, Y
-    private double getDispersion(int random, int accuracy, double density) {
-        return (((double) random * random) / accuracy) % density;
     }
 
     @Override

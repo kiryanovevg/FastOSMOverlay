@@ -25,7 +25,7 @@ import java.util.List;
 
 public class SecondActivity extends AppCompatActivity {
 
-    private static final double LAT = 47.2;
+    /*private static final double LAT = 47.2;
     private static final double LNG = 39.7;
 
     private MapView mapView;
@@ -64,11 +64,11 @@ public class SecondActivity extends AppCompatActivity {
             offset += 0.05;
         }
 
-        /*pathOverlay = new Polyline(mapView);
+        *//*pathOverlay = new Polyline(mapView);
         pathOverlay.setPoints(routeGeoPoints);
         pathOverlay.setColor(Color.CYAN);
         mapView.getOverlays().add(pathOverlay);
-        mapView.invalidate();*/
+        mapView.invalidate();*//*
 
     }
 
@@ -207,5 +207,5 @@ public class SecondActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-    }
+    }*/
 }

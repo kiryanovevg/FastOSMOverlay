@@ -36,7 +36,7 @@ import java.util.List;
 
 public class ThirdActivity extends AppCompatActivity {
 
-    private static final double LAT = 47.2;
+    /*private static final double LAT = 47.2;
     private static final double LNG = 39.7;
 
     private MapView mapView;
@@ -179,10 +179,10 @@ public class ThirdActivity extends AppCompatActivity {
                 //ideally the Polyline construction would happen in the thread but that causes glitches while the event thread
                 //waits for redraw:
 
-                /*osmMap.getOverlays().remove(pathOverlay);
+                *//*osmMap.getOverlays().remove(pathOverlay);
                 pathOverlay = new Polygon(osmMap);
                 pathOverlay.setPoints(zoomPoints);
-                osmMap.getOverlayManager().add(pathOverlay);*/
+                osmMap.getOverlayManager().add(pathOverlay);*//*
                 osmMap.invalidate();
             });
         });
@@ -353,5 +353,5 @@ public class ThirdActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-    }
+    }*/
 }

@@ -28,6 +28,8 @@ import org.osmdroid.views.overlay.Overlay;
 import org.osmdroid.views.overlay.Polygon;
 import org.osmdroid.views.overlay.Polyline;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -39,6 +41,10 @@ public class MainActivity extends AppCompatActivity {
 
     private MapView mapView;
     private FolderOverlay mainFolder;
+//    private ArrayList<GeoPoint> geoPoints;
+
+//    private Polygon pathOverlay = null;
+    private FolderOverlay pathOverlay;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,7 +52,33 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         initMapView(savedInstanceState);
+        initGeoJson();
+    }
 
+    private void initMapView(Bundle savedInstanceState) {
+        mapView = findViewById(R.id.map_view);
+        mapView.setBuiltInZoomControls(false);
+        mapView.setMultiTouchControls(true);
+
+        mapView.getController().setZoom(10d);
+        mapView.getController().setCenter(new GeoPoint(LAT, LNG));
+
+        mapView.addMapListener(new MapListener() {
+            @Override
+            public boolean onScroll(ScrollEvent event) {
+                drawRoute(mapView, Color.RED);
+                return false;
+            }
+
+            @Override
+            public boolean onZoom(ZoomEvent event) {
+                drawRoute(mapView, Color.BLUE);
+                return false;
+            }
+        });
+    }
+
+    private void initGeoJson() {
 //        geoPoints = new ArrayList<>();
 //        parseGeoJson(getString(R.string.geo_json_1), geoPoints);
 
@@ -76,33 +108,36 @@ public class MainActivity extends AppCompatActivity {
 
             }
         };
+
+        byte[] buffer = null;
+        try {
+            InputStream is = getAssets().open("geojson.txt");
+            int size = is.available();
+            buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         KmlDocument kmlDocument = new KmlDocument();
-        kmlDocument.parseGeoJSON(getString(R.string.geo_json_1));
+        kmlDocument.parseGeoJSON(new String(buffer));
         mainFolder = (FolderOverlay) kmlDocument.mKmlRoot
                 .buildOverlay(mapView, null, styler, kmlDocument);
-    }
 
-    private void initMapView(Bundle savedInstanceState) {
-        mapView = findViewById(R.id.map_view);
-        mapView.setBuiltInZoomControls(false);
-        mapView.setMultiTouchControls(true);
+        pathOverlay = new FolderOverlay();
+        for (Overlay overlay : mainFolder.getItems()) {
+            Polygon item = ((Polygon) overlay);
 
-        mapView.getController().setZoom(10d);
-        mapView.getController().setCenter(new GeoPoint(LAT, LNG));
+            Polygon polygon = new Polygon();
+            polygon.setPoints(new ArrayList<>(item.getPoints()));
+            polygon.setFillColor(Color.GRAY);
+            polygon.setStrokeWidth(1.5f);
 
-        mapView.addMapListener(new MapListener() {
-            @Override
-            public boolean onScroll(ScrollEvent event) {
-                drawRoute(mapView, Color.RED);
-                return false;
-            }
+            pathOverlay.add(polygon);
+        }
 
-            @Override
-            public boolean onZoom(ZoomEvent event) {
-                drawRoute(mapView, Color.BLUE);
-                return false;
-            }
-        });
+        mapView.getOverlays().add(pathOverlay);
     }
 
     private Thread updateThread = null;
@@ -112,58 +147,150 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void simplePolygon(final MapView osmMap) {
-
-    }
-
-    private Polygon pathOverlay = null;
     private void updateRoute(final MapView osmMap, final int color){
         updateThread = new Thread(() -> {
-            final ArrayList<GeoPoint> zoomPoints = new ArrayList<>(geoPoints);
-            int MAX_POINTS = 1000;
+//            final ArrayList<GeoPoint> zoomPoints = new ArrayList<>(
+//                    ((Polygon) mainFolder.getItems().get(1)).getPoints()
+//            );
+
+            int MAX_POINTS = 10;
+            int POINTS_PER_ZOOM = MAX_POINTS * ((int) mapView.getZoomLevelDouble());
+
+            for (int i = 0; i < mainFolder.getItems().size(); i++) {
+                Polygon item = ((Polygon) mainFolder.getItems().get(i));
+                Polygon simple = ((Polygon) pathOverlay.getItems().get(i));
+
+                simple.setPoints(item.getPoints());
+                simplePolygon(mapView, simple, POINTS_PER_ZOOM);
+            }
+
+//            removeHiddenPolygons(mapView, pathOverlay);
 
             //Remove any points that are offscreen
-            removeHiddenPoints(osmMap, zoomPoints);
+//            removeHiddenPoints(osmMap, zoomPoints);
 
             //If there's still too many then thin the array
-            if (zoomPoints.size() > MAX_POINTS){
-                simpleOverlay(zoomPoints, MAX_POINTS);
-            }
+//            if (zoomPoints.size() > MAX_POINTS * mapView.getZoomLevelDouble()){
+//                simpleOverlay(zoomPoints, MAX_POINTS);
+//            }
 
             //Update the map on the event thread
             osmMap.post(() -> {
                 //ideally the Polyline construction would happen in the thread but that causes glitches while the event thread
                 //waits for redraw:
-                osmMap.getOverlays().remove(pathOverlay);
+
+                /*osmMap.getOverlays().remove(pathOverlay);
                 pathOverlay = new Polygon(osmMap);
                 pathOverlay.setPoints(zoomPoints);
-                osmMap.getOverlayManager().add(pathOverlay);
+                osmMap.getOverlayManager().add(pathOverlay);*/
                 osmMap.invalidate();
             });
         });
         updateThread.start();
     }
 
-    private void removeHiddenPoints(MapView osmMap, ArrayList<GeoPoint> zoomPoints){
-        BoundingBox bounds = osmMap.getBoundingBox();
+    private void simplePolygon(MapView osmMap, Polygon polygon, int maxPoints) {
+        int count = 1;
+        int stepSize = maxPoints != 0 ?
+                (polygon.getPoints().size() / maxPoints) : polygon.getPoints().size();
 
-        for (Iterator<GeoPoint> iterator = zoomPoints.iterator(); iterator.hasNext();) {
-            GeoPoint point = iterator.next();
+        BoundingBox bounds = null;
+        try {
+            bounds = osmMap.getBoundingBox();
+        } catch (NullPointerException npe) {
+            npe.printStackTrace();
+        }
 
-            boolean inLatitude = point.getLatitude() < bounds.getLatNorth() &&
-                    point.getLatitude() > bounds.getLatSouth();
+        if (bounds != null) {
+            for (Iterator<GeoPoint> iterator = polygon.getPoints().iterator(); iterator.hasNext();) {
+                GeoPoint point = iterator.next();
 
-            boolean inLongitude = point.getLongitude() < bounds.getLonEast() &&
-                    point.getLongitude() > bounds.getLonWest();
+                boolean inLatitude = point.getLatitude() < bounds.getLatNorth() &&
+                        point.getLatitude() > bounds.getLatSouth();
 
-            if(!inLongitude || !inLatitude){
-                iterator.remove();
+                boolean inLongitude = point.getLongitude() < bounds.getLonEast() &&
+                        point.getLongitude() > bounds.getLonWest();
+
+                if (!inLongitude || !inLatitude) {
+//                    iterator.remove();
+                } else {
+
+                }
+
+                if (count != stepSize) {
+                    iterator.remove();
+                } else {
+                    count = 0;
+                }
+
+                count++;
             }
         }
     }
 
-    private void simpleOverlay(ArrayList<GeoPoint> zoomPoints, int maxPoints) {
-        int stepSize = (int) zoomPoints.size() / maxPoints;
+    private void removeHiddenPolygons(MapView osmMap, FolderOverlay folderOverlay) {
+        boolean inBound = false;
+        BoundingBox bounds = null;
+
+        try {
+            bounds = osmMap.getBoundingBox();
+        } catch (NullPointerException npe) {
+            npe.printStackTrace();
+        }
+
+        if (bounds != null) {
+            for (Overlay overlay : folderOverlay.getItems()) {
+                List<GeoPoint> zoomPoints = ((Polygon) overlay).getPoints();
+
+                for (Iterator<GeoPoint> iterator = zoomPoints.iterator(); iterator.hasNext();) {
+                    GeoPoint point = iterator.next();
+
+                    boolean inLatitude = point.getLatitude() < bounds.getLatNorth() &&
+                            point.getLatitude() > bounds.getLatSouth();
+
+                    boolean inLongitude = point.getLongitude() < bounds.getLonEast() &&
+                            point.getLongitude() > bounds.getLonWest();
+
+                    if (inLongitude && inLatitude) {
+                        inBound = true;
+                        break;
+                    }
+                }
+
+                if (!inBound) {
+                    zoomPoints.clear();
+                }
+            }
+        }
+    }
+
+    private void removeHiddenPoints(MapView osmMap, ArrayList<GeoPoint> zoomPoints){
+        BoundingBox bounds = null;
+        try {
+            bounds = osmMap.getBoundingBox();
+        } catch (NullPointerException npe) {
+            npe.printStackTrace();
+        }
+
+        if (bounds != null) {
+            for (Iterator<GeoPoint> iterator = zoomPoints.iterator(); iterator.hasNext();) {
+                GeoPoint point = iterator.next();
+
+                boolean inLatitude = point.getLatitude() < bounds.getLatNorth() &&
+                        point.getLatitude() > bounds.getLatSouth();
+
+                boolean inLongitude = point.getLongitude() < bounds.getLonEast() &&
+                        point.getLongitude() > bounds.getLonWest();
+
+                if(!inLongitude || !inLatitude){
+                    iterator.remove();
+                }
+            }
+        }
+    }
+
+    private void simpleOverlay(List<GeoPoint> zoomPoints, int maxPoints) {
+        int stepSize = zoomPoints.size() / maxPoints;
         int count = 1;
         for (Iterator<GeoPoint> iterator = zoomPoints.iterator(); iterator.hasNext();) {
             iterator.next();

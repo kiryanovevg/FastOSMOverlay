@@ -1,21 +1,38 @@
 package com.kiryanov.arcgisproject;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
+import org.osmdroid.bonuspack.kml.KmlDocument;
+import org.osmdroid.bonuspack.kml.KmlFeature;
+import org.osmdroid.bonuspack.kml.KmlLineString;
+import org.osmdroid.bonuspack.kml.KmlPlacemark;
+import org.osmdroid.bonuspack.kml.KmlPoint;
+import org.osmdroid.bonuspack.kml.KmlPolygon;
+import org.osmdroid.bonuspack.kml.KmlTrack;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.FolderOverlay;
+import org.osmdroid.views.overlay.Marker;
+import org.osmdroid.views.overlay.Overlay;
+import org.osmdroid.views.overlay.Polygon;
+import org.osmdroid.views.overlay.Polyline;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URL;
 
 public class MainActivity extends AppCompatActivity {
@@ -23,20 +40,26 @@ public class MainActivity extends AppCompatActivity {
     private static final double LAT = 47.2;
     private static final double LNG = 39.7;
 
-    private static final String URL = "";
+    private static final String URL = "https://gisro.donland.ru/api/vector_layers/1/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
 
+    private Handler handler;
     private MapView mapView;
     private ProgressBar progressBar;
+    private Button button;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        handler = new Handler(getMainLooper());
+
         progressBar = findViewById(R.id.loading);
+        button = findViewById(R.id.button);
+
+        button.setOnClickListener(v -> initGeoJson());
 
         initMapView(savedInstanceState);
-        initGeoJson();
     }
 
     private void initMapView(Bundle savedInstanceState) {
@@ -60,44 +83,98 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private Thread loadGeoJsonThread;
     private void initGeoJson() {
-        Handler handler = new Handler(getMainLooper()) {
-            @Override
-            public void handleMessage(Message msg) {
+        if (loadGeoJsonThread == null || !loadGeoJsonThread.isAlive()) {
 
-            }
-        };
-        StringBuilder builder = new StringBuilder();
+            StringBuilder builder = new StringBuilder();
+            progressBar.setVisibility(View.VISIBLE);
 
-        new Thread(() -> {
-            try {
-                URL url = new URL(URL);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(
-                        new URL(URL).openConnection().getInputStream()
-                ));
+            loadGeoJsonThread = new Thread(() -> {
+                try {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(
+                            new URL(URL).openConnection().getInputStream()
+                    ));
 
-                while (reader.ready()) {
-                    builder.append(reader.readLine());
+                    String input;
+                    while ((input = reader.readLine()) != null) {
+                        builder.append(input);
+                    }
+
+                    reader.close();
+
+                    handler.post(() -> {
+                        Toast.makeText(
+                                MainActivity.this,
+                                "GeoJson loading",
+                                Toast.LENGTH_SHORT
+                        ).show();
+
+                        onComplete(builder.toString());
+                    });
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+
+                    handler.post(() -> {
+                        onError(e.getMessage());
+                        progressBar.setVisibility(View.GONE);
+                    });
                 }
-
-                reader.close();
-
-                handler.post(() -> onComplete(builder.toString()));
-
-            } catch (IOException e) {
-                e.printStackTrace();
-
-                handler.post(this::onError);
-            }
-        }).start();
+            });
+            loadGeoJsonThread.start();
+        } else {
+            Toast.makeText(this, "Thread is already running", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void onComplete(String geoJson) {
+        loadGeoJsonThread = new Thread(() -> {
+            KmlDocument document = new KmlDocument();
+            document.parseGeoJSON(geoJson);
 
+            FolderOverlay overlay = ((FolderOverlay) document.mKmlRoot.buildOverlay(
+                    mapView, null, new KmlFeature.Styler() {
+
+                        @Override
+                        public void onFeature(Overlay overlay, KmlFeature kmlFeature) {
+
+                        }
+
+                        @Override
+                        public void onPoint(Marker marker, KmlPlacemark kmlPlacemark, KmlPoint kmlPoint) {
+
+                        }
+
+                        @Override
+                        public void onLineString(Polyline polyline, KmlPlacemark kmlPlacemark, KmlLineString kmlLineString) {
+
+                        }
+
+                        @Override
+                        public void onPolygon(Polygon polygon, KmlPlacemark kmlPlacemark, KmlPolygon kmlPolygon) {
+                            polygon.setFillColor(Color.GRAY);
+                            polygon.setStrokeWidth(1.5f);
+                        }
+
+                        @Override
+                        public void onTrack(Polyline polyline, KmlPlacemark kmlPlacemark, KmlTrack kmlTrack) {
+
+                        }
+                    }, document));
+
+            handler.post(() -> {
+                progressBar.setVisibility(View.GONE);
+                mapView.getOverlays().add(overlay);
+            });
+        });
+
+        loadGeoJsonThread.setPriority(Thread.MAX_PRIORITY);
+        loadGeoJsonThread.start();
     }
 
-    private void onError() {
-
+    private void onError(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     @Override

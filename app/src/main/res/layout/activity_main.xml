@@ -20,7 +20,7 @@
         >
 
         <Button
-            android:id="@+id/add_marker"
+            android:id="@+id/button"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:background="#b6b6b6"
@@ -33,6 +33,7 @@
             android:id="@+id/loading"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
+            android:visibility="gone"
             />
 
     </LinearLayout>

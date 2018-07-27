@@ -109,8 +109,13 @@ public class MainActivity extends AppCompatActivity {
                                 "GeoJson loading",
                                 Toast.LENGTH_SHORT
                         ).show();
+                    });
 
-                        onComplete(builder.toString());
+                    FolderOverlay overlay = createOverlayFromGeoJson(builder.toString());
+
+                    handler.post(() -> {
+                        mapView.getOverlays().add(overlay);
+                        progressBar.setVisibility(View.GONE);
                     });
 
                 } catch (IOException e) {
@@ -128,49 +133,41 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void onComplete(String geoJson) {
-        loadGeoJsonThread = new Thread(() -> {
-            KmlDocument document = new KmlDocument();
-            document.parseGeoJSON(geoJson);
+    private FolderOverlay createOverlayFromGeoJson(String geoJson) {
+        KmlDocument document = new KmlDocument();
+        document.parseGeoJSON(geoJson);
 
-            FolderOverlay overlay = ((FolderOverlay) document.mKmlRoot.buildOverlay(
-                    mapView, null, new KmlFeature.Styler() {
+        FolderOverlay overlay = ((FolderOverlay) document.mKmlRoot.buildOverlay(
+                mapView, null, new KmlFeature.Styler() {
 
-                        @Override
-                        public void onFeature(Overlay overlay, KmlFeature kmlFeature) {
+                    @Override
+                    public void onFeature(Overlay overlay, KmlFeature kmlFeature) {
 
-                        }
+                    }
 
-                        @Override
-                        public void onPoint(Marker marker, KmlPlacemark kmlPlacemark, KmlPoint kmlPoint) {
+                    @Override
+                    public void onPoint(Marker marker, KmlPlacemark kmlPlacemark, KmlPoint kmlPoint) {
 
-                        }
+                    }
 
-                        @Override
-                        public void onLineString(Polyline polyline, KmlPlacemark kmlPlacemark, KmlLineString kmlLineString) {
+                    @Override
+                    public void onLineString(Polyline polyline, KmlPlacemark kmlPlacemark, KmlLineString kmlLineString) {
 
-                        }
+                    }
 
-                        @Override
-                        public void onPolygon(Polygon polygon, KmlPlacemark kmlPlacemark, KmlPolygon kmlPolygon) {
-                            polygon.setFillColor(Color.GRAY);
-                            polygon.setStrokeWidth(1.5f);
-                        }
+                    @Override
+                    public void onPolygon(Polygon polygon, KmlPlacemark kmlPlacemark, KmlPolygon kmlPolygon) {
+                        polygon.setFillColor(Color.GRAY);
+                        polygon.setStrokeWidth(1.5f);
+                    }
 
-                        @Override
-                        public void onTrack(Polyline polyline, KmlPlacemark kmlPlacemark, KmlTrack kmlTrack) {
+                    @Override
+                    public void onTrack(Polyline polyline, KmlPlacemark kmlPlacemark, KmlTrack kmlTrack) {
 
-                        }
-                    }, document));
+                    }
+                }, document));
 
-            handler.post(() -> {
-                progressBar.setVisibility(View.GONE);
-                mapView.getOverlays().add(overlay);
-            });
-        });
-
-        loadGeoJsonThread.setPriority(Thread.MAX_PRIORITY);
-        loadGeoJsonThread.start();
+        return overlay;
     }
 
     private void onError(String message) {

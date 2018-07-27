@@ -114,6 +114,12 @@ public class MainActivity extends AppCompatActivity {
                     FolderOverlay overlay = createOverlayFromGeoJson(builder.toString());
 
                     handler.post(() -> {
+                        Toast.makeText(
+                                MainActivity.this,
+                                "Setting folder",
+                                Toast.LENGTH_SHORT
+                        ).show();
+
                         mapView.getOverlays().add(overlay);
                         progressBar.setVisibility(View.GONE);
                     });
@@ -137,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
         KmlDocument document = new KmlDocument();
         document.parseGeoJSON(geoJson);
 
-        FolderOverlay overlay = ((FolderOverlay) document.mKmlRoot.buildOverlay(
+        FolderOverlay folderOverlay = ((FolderOverlay) document.mKmlRoot.buildOverlay(
                 mapView, null, new KmlFeature.Styler() {
 
                     @Override
@@ -167,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }, document));
 
-        return overlay;
+        return folderOverlay;
     }
 
     private void onError(String message) {

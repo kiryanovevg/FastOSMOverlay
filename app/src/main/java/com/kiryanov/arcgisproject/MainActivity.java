@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
     private static final double LNG = 39.7;
 
     private static final String URL = "https://gisro.donland.ru/api/vector_layers/1/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
+    private static final String URL_SETTLEMENT = "http://192.168.202.136:7999/api/vector_layers/179/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
 
     private Handler handler;
     private MapView mapView;
@@ -93,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
             loadGeoJsonThread = new Thread(() -> {
                 try {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(
-                            new URL(URL).openConnection().getInputStream()
+                            new URL(URL_SETTLEMENT).openConnection().getInputStream()
                     ));
 
                     String input;

@@ -1,33 +1,24 @@
 package com.kiryanov.arcgisproject;
 
 import android.graphics.Color;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
-import android.os.Handler;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.esri.arcgisruntime.geometry.Point;
-import com.esri.arcgisruntime.geometry.PointCollection;
 import com.esri.arcgisruntime.geometry.Polygon;
-import com.esri.arcgisruntime.geometry.SpatialReferences;
 import com.esri.arcgisruntime.mapping.ArcGISMap;
 import com.esri.arcgisruntime.mapping.Basemap;
 import com.esri.arcgisruntime.mapping.view.Graphic;
 import com.esri.arcgisruntime.mapping.view.GraphicsOverlay;
 import com.esri.arcgisruntime.mapping.view.MapView;
-import com.esri.arcgisruntime.symbology.PictureMarkerSymbol;
 import com.esri.arcgisruntime.symbology.SimpleFillSymbol;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.esri.arcgisruntime.symbology.SimpleLineSymbol;
 
-import java.util.Random;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -35,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private GraphicsOverlay overlay;
 
     private Button button;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
         initMapView();
 
         button = findViewById(R.id.button);
+        progressBar = findViewById(R.id.loading);
 
         button.setOnClickListener(v -> initGeoJson());
     }
@@ -61,11 +54,54 @@ public class MainActivity extends AppCompatActivity {
         mapView.getGraphicsOverlays().add(overlay);
     }
 
+    private Disposable disposable;
     private void initGeoJson() {
+        if (disposable == null || disposable.isDisposed()) {
+            Repository.getInstance().getDistricts(this)
+                    .subscribe(new Observer<Polygon>() {
+                        @Override
+                        public void onSubscribe(Disposable d) {
+                            disposable = d;
+                            progressBar.setVisibility(View.VISIBLE);
+                        }
 
+                        @Override
+                        public void onNext(Polygon polygon) {
+                            overlay.getGraphics().add(new Graphic(
+                                    polygon,
+                                    new SimpleFillSymbol(
+                                            SimpleFillSymbol.Style.SOLID,
+                                            Color.BLUE,
+                                            new SimpleLineSymbol(
+                                                    SimpleLineSymbol.Style.SOLID,
+                                                    Color.BLACK, 3
+                                            )
+                                    )
+                            ));
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                            disposable.dispose();
+                            showMessage(e.getMessage());
+                            progressBar.setVisibility(View.GONE);
+                        }
+
+                        @Override
+                        public void onComplete() {
+                            disposable.dispose();
+                            progressBar.setVisibility(View.GONE);
+                        }
+                    });
+
+        }
     }
 
-    private void addPolygons() {
+    private void showMessage(String msg) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+    }
+
+    /*private void addPolygons() {
         int count = 100;
 
         SimpleFillSymbol fillSymbol = new SimpleFillSymbol(
@@ -89,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
         setButtonText(addPolygonBtn, count);
 
         if (polygonOffset > 80) polygonOffset = -80;
-    }
+    }*/
 
     @Override
     protected void onResume() {

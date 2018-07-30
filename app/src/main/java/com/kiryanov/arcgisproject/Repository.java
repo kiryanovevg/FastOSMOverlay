@@ -2,33 +2,26 @@ package com.kiryanov.arcgisproject;
 
 import android.content.Context;
 import android.graphics.Color;
-import android.util.Log;
 import android.widget.Toast;
 
+import com.esri.arcgisruntime.geometry.PointCollection;
+import com.esri.arcgisruntime.geometry.Polygon;
+import com.esri.arcgisruntime.geometry.SpatialReferences;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import org.osmdroid.util.GeoPoint;
-import org.osmdroid.views.overlay.FolderOverlay;
-import org.osmdroid.views.overlay.Overlay;
-import org.osmdroid.views.overlay.Polygon;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.functions.BiFunction;
 import io.reactivex.schedulers.Schedulers;
 
 /**
@@ -51,22 +44,22 @@ public class Repository {
     private static final String URL_DISTRICTS = "https://gisro.donland.ru/api/vector_layers/1/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
     private static final String URL_SETTLEMENT = "http://192.168.202.136:7999/api/vector_layers/179/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
 
-    public Observable<Overlay> getDistricts(Context context) {
+    public Observable<Polygon> getDistricts(Context context) {
         return getGeoJson(context, URL_DISTRICTS);
     }
 
-    public Observable<Overlay> getSettlement(Context context) {
+    public Observable<Polygon> getSettlement(Context context) {
         return getGeoJson(context, URL_SETTLEMENT);
     }
 
-    private Observable<Overlay> getGeoJson(Context context, String url) {
-        Observable<Overlay> main = Observable.fromCallable(() -> getRequest(url))
+    private Observable<Polygon> getGeoJson(Context context, String url) {
+        Observable<Polygon> main = Observable.fromCallable(() -> getRequest(url))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnNext(s -> Toast.makeText(context, "GeoJson loading", Toast.LENGTH_SHORT).show())
                 .observeOn(Schedulers.computation())
                 .map(geoJson -> {
-                    FolderOverlay folderOverlay = new FolderOverlay();
+                    List<Polygon> folderOverlay = new ArrayList<>();
 
                     JsonObject object = new JsonParser().parse(geoJson).getAsJsonObject();
                     JsonArray features = object.getAsJsonArray("features");
@@ -79,9 +72,8 @@ public class Repository {
                                 .getAsJsonArray("coordinates")
                                 .get(0).getAsJsonArray();
 
-                        List<GeoPoint> geoPoints = new ArrayList<>();
+                        PointCollection points = new PointCollection(SpatialReferences.getWgs84());
 
-                        geoPoints.clear();
                         for (JsonElement element : coordinates) {
                             JsonArray coord = element.getAsJsonArray();
 
@@ -89,25 +81,17 @@ public class Repository {
                             JsonElement second = coord.get(1);
 
                             if (first.isJsonPrimitive() && second.isJsonPrimitive()) {
-                                geoPoints.add(new GeoPoint(
-                                        second.getAsDouble(),
-                                        first.getAsDouble()
-                                ));
+                                points.add(first.getAsDouble(), second.getAsDouble());
                             }
                         }
 
-                        Polygon polygon = new Polygon();
-                        polygon.setFillColor(Color.GRAY);
-                        polygon.setStrokeWidth(1f);
-                        polygon.setPoints(geoPoints);
-
+                        Polygon polygon = new Polygon(points);
                         folderOverlay.add(polygon);
                     }
 
                     return folderOverlay;
                 })
-                .flatMap (folderOverlay -> Observable.fromIterable(folderOverlay.getItems()));
-
+                .flatMap(Observable::fromIterable);
 
         Observable<Long> interval = Observable.interval(500, TimeUnit.MILLISECONDS);
 

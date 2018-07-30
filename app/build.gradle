@@ -39,8 +39,11 @@ dependencies {
 
     implementation 'com.esri.arcgisruntime:arcgis-android:100.3.0'
 
-    implementation 'org.geotools:gt-main:19-SNAPSHOT'
-    implementation 'org.geotools:gt-shapefile:19-SNAPSHOT'
+    implementation 'io.reactivex.rxjava2:rxjava:2.1.9'
+    implementation 'io.reactivex.rxjava2:rxandroid:2.0.2'
+
+//    implementation 'org.geotools:gt-main:19-SNAPSHOT'
+//    implementation 'org.geotools:gt-shapefile:19-SNAPSHOT'
 
     // https://mvnrepository.com/artifact/org.geotools/gt-main
 //    compile group: 'org.geotools', name: 'gt-shapefile', version: '20-SNAPSHOT'

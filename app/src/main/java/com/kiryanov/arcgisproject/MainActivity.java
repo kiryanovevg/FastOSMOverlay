@@ -1,6 +1,5 @@
 package com.kiryanov.arcgisproject;
 
-import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -8,14 +7,13 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.esri.arcgisruntime.geometry.Polygon;
 import com.esri.arcgisruntime.mapping.ArcGISMap;
 import com.esri.arcgisruntime.mapping.Basemap;
 import com.esri.arcgisruntime.mapping.view.Graphic;
 import com.esri.arcgisruntime.mapping.view.GraphicsOverlay;
 import com.esri.arcgisruntime.mapping.view.MapView;
-import com.esri.arcgisruntime.symbology.SimpleFillSymbol;
-import com.esri.arcgisruntime.symbology.SimpleLineSymbol;
+
+import java.util.List;
 
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
@@ -58,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private void initGeoJson() {
         if (disposable == null || disposable.isDisposed()) {
             Repository.getInstance().getDistricts(this)
-                    .subscribe(new Observer<Polygon>() {
+                    .subscribe(new Observer<List<Graphic>>() {
                         @Override
                         public void onSubscribe(Disposable d) {
                             disposable = d;
@@ -66,18 +64,8 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         @Override
-                        public void onNext(Polygon polygon) {
-                            overlay.getGraphics().add(new Graphic(
-                                    polygon,
-                                    new SimpleFillSymbol(
-                                            SimpleFillSymbol.Style.SOLID,
-                                            Color.BLUE,
-                                            new SimpleLineSymbol(
-                                                    SimpleLineSymbol.Style.SOLID,
-                                                    Color.BLACK, 3
-                                            )
-                                    )
-                            ));
+                        public void onNext(List<Graphic> graphics) {
+                            overlay.getGraphics().addAll(graphics);
                         }
 
                         @Override

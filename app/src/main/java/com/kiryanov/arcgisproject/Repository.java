@@ -7,6 +7,9 @@ import android.widget.Toast;
 import com.esri.arcgisruntime.geometry.PointCollection;
 import com.esri.arcgisruntime.geometry.Polygon;
 import com.esri.arcgisruntime.geometry.SpatialReferences;
+import com.esri.arcgisruntime.mapping.view.Graphic;
+import com.esri.arcgisruntime.symbology.SimpleFillSymbol;
+import com.esri.arcgisruntime.symbology.SimpleLineSymbol;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -44,22 +47,22 @@ public class Repository {
     private static final String URL_DISTRICTS = "https://gisro.donland.ru/api/vector_layers/1/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
     private static final String URL_SETTLEMENT = "http://192.168.202.136:7999/api/vector_layers/179/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
 
-    public Observable<Polygon> getDistricts(Context context) {
+    public Observable<List<Graphic>> getDistricts(Context context) {
         return getGeoJson(context, URL_DISTRICTS);
     }
 
-    public Observable<Polygon> getSettlement(Context context) {
+    public Observable<List<Graphic>> getSettlement(Context context) {
         return getGeoJson(context, URL_SETTLEMENT);
     }
 
-    private Observable<Polygon> getGeoJson(Context context, String url) {
-        Observable<Polygon> main = Observable.fromCallable(() -> getRequest(url))
+    private Observable<List<Graphic>> getGeoJson(Context context, String url) {
+        Observable<List<Graphic>> main = Observable.fromCallable(() -> getRequest(url))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnNext(s -> Toast.makeText(context, "GeoJson loading", Toast.LENGTH_SHORT).show())
                 .observeOn(Schedulers.computation())
                 .map(geoJson -> {
-                    List<Polygon> folderOverlay = new ArrayList<>();
+                    List<Graphic> graphics = new ArrayList<>();
 
                     JsonObject object = new JsonParser().parse(geoJson).getAsJsonObject();
                     JsonArray features = object.getAsJsonArray("features");
@@ -86,17 +89,29 @@ public class Repository {
                         }
 
                         Polygon polygon = new Polygon(points);
-                        folderOverlay.add(polygon);
+                        graphics.add(new Graphic(
+                                polygon,
+                                new SimpleFillSymbol(
+                                        SimpleFillSymbol.Style.SOLID, Color.GRAY,
+                                        new SimpleLineSymbol(
+                                                SimpleLineSymbol.Style.SOLID,
+                                                Color.BLACK, 2
+                                        )
+                                )
+                        ));
                     }
 
-                    return folderOverlay;
+                    return graphics;
                 })
-                .flatMap(Observable::fromIterable);
+                .flatMap(Observable::fromIterable)
+                .buffer(10);
 
-        Observable<Long> interval = Observable.interval(500, TimeUnit.MILLISECONDS);
+//        Observable<Long> interval = Observable.interval(500, TimeUnit.MILLISECONDS);
 
-        return Observable.zip(main, interval, (overlay, aLong) -> overlay)
-                .observeOn(AndroidSchedulers.mainThread());
+//        return Observable.zip(main, interval, (overlay, aLong) -> overlay)
+//                .observeOn(AndroidSchedulers.mainThread());
+
+        return main.observeOn(AndroidSchedulers.mainThread());
     }
 
     private String getRequest(String url) throws IOException {

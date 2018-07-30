@@ -34,9 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private MapView mapView;
     private GraphicsOverlay overlay;
 
-    private Button addPolygonBtn;
-    private Button addMarkerBtn;
-    private Button addGeoJsonBtn;
+    private Button button;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,13 +44,9 @@ public class MainActivity extends AppCompatActivity {
         mapView = findViewById(R.id.map_view);
         initMapView();
 
-        addPolygonBtn = findViewById(R.id.add_polygon);
-        addMarkerBtn = findViewById(R.id.add_marker);
-        addGeoJsonBtn = findViewById(R.id.from_geo_json);
+        button = findViewById(R.id.button);
 
-        addPolygonBtn.setOnClickListener(v -> addPolygons());
-        addMarkerBtn.setOnClickListener(v -> addMarkers());
-        addGeoJsonBtn.setOnClickListener(v -> addFromGeoJson());
+        button.setOnClickListener(v -> initGeoJson());
     }
 
     private void initMapView() {
@@ -67,7 +61,9 @@ public class MainActivity extends AppCompatActivity {
         mapView.getGraphicsOverlays().add(overlay);
     }
 
-    private double polygonOffset = 0;
+    private void initGeoJson() {
+
+    }
 
     private void addPolygons() {
         int count = 100;
@@ -93,126 +89,6 @@ public class MainActivity extends AppCompatActivity {
         setButtonText(addPolygonBtn, count);
 
         if (polygonOffset > 80) polygonOffset = -80;
-    }
-    private double markerOffset = 0;
-
-    private void addMarkers() {
-        BitmapDrawable drawable = (BitmapDrawable) ContextCompat
-                .getDrawable(this, R.mipmap.ic_launcher_round);
-        final PictureMarkerSymbol markerSymbol = new PictureMarkerSymbol(drawable);
-        markerSymbol.setHeight(50);
-        markerSymbol.setWidth(50);
-        markerSymbol.loadAsync();
-
-        markerSymbol.addDoneLoadingListener(() -> {
-            Random random = new Random();
-            int count = 1000;
-            int accuracy = 10000;
-            double density = 0.5;
-
-            for (int i = 0; i < count; i++) {
-                double offsetX = (((double) random.nextInt() * random.nextInt()) / accuracy) % density;
-                double offsetY = (((double) random.nextInt() * random.nextInt()) / accuracy) % density;
-
-                Point point = new Point(
-                        39.6 + offsetX + markerOffset,
-                        47.2 + offsetY + markerOffset,
-                        SpatialReferences.getWgs84()
-                );
-                Graphic graphic = new Graphic(point, markerSymbol);
-                overlay.getGraphics().add(graphic);
-            }
-
-            if (markerOffset > 80) markerOffset = -80;
-            markerOffset += density;
-
-            setButtonText(addMarkerBtn, count);
-        });
-    }
-
-    private Thread computate;
-    private void addFromGeoJson() {
-        Handler handler = new Handler(getMainLooper());
-
-        int count = 100;
-
-        String geoJson = getString(R.string.geo_json_3);
-
-        if (computate == null || !computate.isAlive()) {
-            jsonOffsetX = 0;
-            jsonOffsetY += 0.3;
-
-            computate = parseGeoJson(handler, geoJson, count);
-            computate.start();
-        } else {
-            Toast.makeText(this, "Wait", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private double jsonOffsetX = 0;
-    private double jsonOffsetY = 0;
-    private Thread parseGeoJson(Handler handler, String geoJson, int count) {
-        return new Thread(() -> {
-
-            for (int i = 0; i < count; i++) {
-                Log.d("Thread", "1: " + Thread.currentThread().getName());
-
-                JsonObject object = new JsonParser().parse(geoJson).getAsJsonObject();
-                JsonArray features = object.getAsJsonArray("features");
-
-                for (JsonElement fe : features) {
-                    JsonObject fo = fe.getAsJsonObject();
-
-                    JsonArray coordinates = fo
-                            .getAsJsonObject("geometry")
-                            .getAsJsonArray("coordinates")
-                            .get(0).getAsJsonArray();
-
-                    PointCollection points = new PointCollection(SpatialReferences.getWgs84());
-
-                    for (JsonElement element : coordinates)
-                        addPoint(element, points);
-                    addPoint(coordinates.get(0), points);
-
-                    SimpleFillSymbol fillSymbol = new SimpleFillSymbol(
-                            SimpleFillSymbol.Style.SOLID,
-                            i % 2 == 0 ? Color.RED : Color.BLUE,
-                            null
-                    );
-                    Polygon polygon = new Polygon(points);
-
-                    handler.post(() -> {
-                        Log.d("Thread", "2: " + Thread.currentThread().getName());
-                        overlay.getGraphics().add(new Graphic(polygon, fillSymbol));
-                    });
-                }
-
-                handler.post(() -> {
-                    jsonOffsetX += 0.05;
-                    setButtonText(addGeoJsonBtn, 3);
-                });
-            }
-        });
-    }
-
-    private void addPoint(JsonElement element, PointCollection points) {
-        JsonArray coord = element.getAsJsonArray();
-
-        JsonElement first = coord.get(0);
-        JsonElement second = coord.get(1);
-
-        if (first.isJsonPrimitive() && second.isJsonPrimitive()) {
-            points.add(new Point(
-                    first.getAsDouble() + jsonOffsetX,
-                    second.getAsDouble() + jsonOffsetY)
-            );
-        }
-    }
-
-    private void setButtonText(Button btn, int addable) {
-        btn.setText(
-                String.valueOf(Integer.parseInt(btn.getText().toString()) + addable)
-        );
     }
 
     @Override

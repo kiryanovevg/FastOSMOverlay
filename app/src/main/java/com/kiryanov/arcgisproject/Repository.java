@@ -1,6 +1,8 @@
 package com.kiryanov.arcgisproject;
 
+import android.content.Context;
 import android.graphics.Color;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.gson.JsonArray;
@@ -20,11 +22,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.functions.BiFunction;
 import io.reactivex.schedulers.Schedulers;
 
 /**
@@ -47,10 +51,19 @@ public class Repository {
     private static final String URL_DISTRICTS = "https://gisro.donland.ru/api/vector_layers/1/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
     private static final String URL_SETTLEMENT = "http://192.168.202.136:7999/api/vector_layers/179/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
 
-    public Observable<Overlay> getDistricts(Toast toast){
-        return Observable.fromCallable(() -> getRequest(URL_DISTRICTS))
+    public Observable<Overlay> getDistricts(Context context) {
+        return getGeoJson(context, URL_DISTRICTS);
+    }
+
+    public Observable<Overlay> getSettlement(Context context) {
+        return getGeoJson(context, URL_SETTLEMENT);
+    }
+
+    private Observable<Overlay> getGeoJson(Context context, String url) {
+        Observable<Overlay> main = Observable.fromCallable(() -> getRequest(url))
                 .subscribeOn(Schedulers.io())
-                .doOnNext(s -> toast.show())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext(s -> Toast.makeText(context, "GeoJson loading", Toast.LENGTH_SHORT).show())
                 .observeOn(Schedulers.computation())
                 .map(geoJson -> {
                     FolderOverlay folderOverlay = new FolderOverlay();
@@ -93,7 +106,12 @@ public class Repository {
 
                     return folderOverlay;
                 })
-                .flatMap(folderOverlay -> Observable.fromIterable(folderOverlay.getItems()))
+                .flatMap (folderOverlay -> Observable.fromIterable(folderOverlay.getItems()));
+
+
+        Observable<Long> interval = Observable.interval(500, TimeUnit.MILLISECONDS);
+
+        return Observable.zip(main, interval, (overlay, aLong) -> overlay)
                 .observeOn(AndroidSchedulers.mainThread());
     }
 

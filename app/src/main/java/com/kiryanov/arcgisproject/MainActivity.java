@@ -11,10 +11,13 @@ import android.widget.Toast;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
+import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.FolderOverlay;
 import org.osmdroid.views.overlay.Overlay;
+
+import java.util.Collection;
 
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
@@ -29,7 +32,8 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private Button button;
 
-    private FolderOverlay polygonOverlay;
+//    private FolderOverlay polygonOverlay;
+    private PolygonFolder polygonFolder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,15 +70,19 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        polygonOverlay = new FolderOverlay();
-        mapView.getOverlays().add(polygonOverlay);
+//        polygonOverlay = new FolderOverlay();
+//        mapView.getOverlays().add(polygonOverlay);
+
+        polygonFolder = new PolygonFolder();
+        mapView.getOverlays().add(polygonFolder);
+        mapView.addMapListener(polygonFolder);
     }
 
     private Disposable disposable;
     private void initGeoJson() {
         if (disposable == null || disposable.isDisposed()) {
-            Repository.getInstance().getSettlement(this)
-                    .subscribe(new Observer<Overlay>() {
+            Repository.getInstance().getDistricts(this, getToleranceForReduce())
+                    .subscribe(new Observer<SimplePolygon>() {
                         @Override
                         public void onSubscribe(Disposable d) {
                             disposable = d;
@@ -82,8 +90,8 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         @Override
-                        public void onNext(Overlay overlay) {
-                            mapView.getOverlays().add(overlay);
+                        public void onNext(SimplePolygon polygon) {
+                            polygonFolder.add(polygon);
                             mapView.invalidate();
                         }
 
@@ -104,6 +112,13 @@ public class MainActivity extends AppCompatActivity {
         } else {
             showMessage("Already running");
         }
+    }
+
+    private double getToleranceForReduce() {
+        BoundingBox boundingBox = mapView.getBoundingBox();
+        final double latSpanDegrees = boundingBox.getLatitudeSpan();
+
+        return latSpanDegrees / getResources().getDisplayMetrics().densityDpi;
     }
 
     private void showMessage(String msg) {

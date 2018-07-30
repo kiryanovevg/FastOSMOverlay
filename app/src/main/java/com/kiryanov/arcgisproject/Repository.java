@@ -10,6 +10,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import org.osmdroid.util.GeoPoint;
+import org.osmdroid.util.PointReducer;
 import org.osmdroid.views.overlay.FolderOverlay;
 import org.osmdroid.views.overlay.Overlay;
 import org.osmdroid.views.overlay.Polygon;
@@ -46,22 +47,23 @@ public class Repository {
     private static final String URL_DISTRICTS = "https://gisro.donland.ru/api/vector_layers/1/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
     private static final String URL_SETTLEMENT = "http://192.168.202.136:7999/api/vector_layers/179/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
 
-    public Observable<Overlay> getDistricts(Context context) {
-        return getGeoJson(context, URL_DISTRICTS);
+    public Observable<SimplePolygon> getDistricts(Context context, double tolerance) {
+        return getGeoJson(context, URL_DISTRICTS, tolerance);
     }
 
-    public Observable<Overlay> getSettlement(Context context) {
-        return getGeoJson(context, URL_SETTLEMENT);
+    public Observable<SimplePolygon> getSettlement(Context context, double tolerance) {
+        return getGeoJson(context, URL_SETTLEMENT, tolerance);
     }
 
-    private Observable<Overlay> getGeoJson(Context context, String url) {
-        Observable<Overlay> main = Observable.fromCallable(() -> getRequest(url))
+    private Observable<SimplePolygon> getGeoJson(Context context, String url, double tolerance) {
+        Observable<SimplePolygon> main = Observable.fromCallable(() -> getRequest(url))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnNext(s -> Toast.makeText(context, "GeoJson loading", Toast.LENGTH_SHORT).show())
                 .observeOn(Schedulers.computation())
                 .map(geoJson -> {
-                    FolderOverlay folderOverlay = new FolderOverlay();
+//                    FolderOverlay folderOverlay = new FolderOverlay();
+                    List<SimplePolygon> list = new ArrayList<>();
 
                     JsonObject object = new JsonParser().parse(geoJson).getAsJsonObject();
                     JsonArray features = object.getAsJsonArray("features");
@@ -91,17 +93,17 @@ public class Repository {
                             }
                         }
 
-                        Polygon polygon = new Polygon();
-                        polygon.setFillColor(Color.GRAY);
+                        SimplePolygon polygon = new SimplePolygon(geoPoints, tolerance);
+                        /*polygon.setFillColor(Color.GRAY);
                         polygon.setStrokeWidth(1f);
-                        polygon.setPoints(geoPoints);
+                        polygon.setPoints(geoPoints);*/
 
-                        folderOverlay.add(polygon);
+                        list.add(polygon);
                     }
 
-                    return folderOverlay;
+                    return list;
                 })
-                .flatMap (folderOverlay -> Observable.fromIterable(folderOverlay.getItems()));
+                .flatMap (Observable::fromIterable);
 
 
         Observable<Long> interval = Observable.interval(500, TimeUnit.MILLISECONDS);

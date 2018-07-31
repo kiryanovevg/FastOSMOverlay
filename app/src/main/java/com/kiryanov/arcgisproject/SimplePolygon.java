@@ -14,7 +14,7 @@ import java.util.List;
  * Created by Evgeniy on 30.07.18.
  */
 
-public class SimplePolygon extends Polygon{
+public class SimplePolygon extends Polygon {
 
     private List<GeoPoint> originalPoints;
     private List<GeoPoint> simplePoints;

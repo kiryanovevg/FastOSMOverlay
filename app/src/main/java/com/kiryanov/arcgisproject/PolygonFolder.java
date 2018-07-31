@@ -3,9 +3,13 @@ package com.kiryanov.arcgisproject;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
+import org.osmdroid.util.BoundingBox;
+import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.FolderOverlay;
 import org.osmdroid.views.overlay.Overlay;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -18,6 +22,8 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
 
     @Override
     public boolean onScroll(ScrollEvent event) {
+        hideOutOfBoundsPolygons(event.getSource());
+
         return false;
     }
 
@@ -26,26 +32,65 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
         if (event.getZoomLevel() > 11) {
             if (simple) {
                 for (Overlay polygon: getItems()) {
-                    ((SimplePolygon) polygon).showOriginal();
+                    if (polygon instanceof SimplePolygon) {
+                        ((SimplePolygon) polygon).showOriginal();
+                    }
                 }
                 simple = false;
             }
         } else {
             if (!simple) {
                 for (Overlay polygon: getItems()) {
-                    ((SimplePolygon) polygon).showSimple();
+                    if (polygon instanceof  SimplePolygon) {
+                        ((SimplePolygon) polygon).showSimple();
+                    }
                 }
                 simple = true;
             }
         }
+
+        hideOutOfBoundsPolygons(event.getSource());
+
         return false;
     }
 
-    private void add(SimplePolygon polygon) {
-        getItems().add(polygon);
-    }
+    private void hideOutOfBoundsPolygons(MapView mapView) {
+        BoundingBox bounds = null;
+        try {
+            bounds = mapView.getBoundingBox();
+        } catch (NullPointerException npe) {
+            npe.printStackTrace();
+        }
 
-    private void addAll(List<SimplePolygon> polygonList) {
-        getItems().addAll(polygonList);
+        if (bounds != null) {
+            for (Overlay overlay : getItems()) {
+                if (overlay instanceof SimplePolygon) {
+                    List<GeoPoint> points = ((SimplePolygon) overlay).getPoints();
+
+                    boolean show = true;
+
+                    for (GeoPoint point : points) {
+                        boolean inLatitudeBounds = point.getLatitude() < bounds.getLatNorth() &&
+                                point.getLatitude() > bounds.getLatSouth();
+
+                        boolean inLongitudeBounds = point.getLongitude() < bounds.getLonEast() &&
+                                point.getLongitude() > bounds.getLonWest();
+
+                        if (!inLongitudeBounds || !inLatitudeBounds) {
+                            if (overlay.isEnabled()) {
+                                overlay.setEnabled(false);
+                            }
+
+                            show = false;
+                            break;
+                        }
+                    }
+
+                    if (show && !overlay.isEnabled()) {
+                        overlay.setEnabled(true);
+                    }
+                }
+            }
+        }
     }
 }

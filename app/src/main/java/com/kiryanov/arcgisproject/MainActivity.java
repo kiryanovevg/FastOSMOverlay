@@ -18,6 +18,7 @@ import org.osmdroid.views.overlay.FolderOverlay;
 import org.osmdroid.views.overlay.Overlay;
 
 import java.util.Collection;
+import java.util.List;
 
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
@@ -82,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
     private void initGeoJson() {
         if (disposable == null || disposable.isDisposed()) {
             Repository.getInstance().getSettlement(this, getToleranceForReduce())
-                    .subscribe(new Observer<SimplePolygon>() {
+                    .subscribe(new Observer<List<SimplePolygon>>() {
                         @Override
                         public void onSubscribe(Disposable d) {
                             disposable = d;
@@ -90,8 +91,8 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         @Override
-                        public void onNext(SimplePolygon polygon) {
-                            polygonFolder.add(polygon);
+                        public void onNext(List<SimplePolygon> polygon) {
+                            polygonFolder.getItems().addAll(polygon);
                             mapView.invalidate();
                         }
 

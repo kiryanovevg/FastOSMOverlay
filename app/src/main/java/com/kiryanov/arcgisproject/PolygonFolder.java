@@ -22,7 +22,8 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
 
     @Override
     public boolean onScroll(ScrollEvent event) {
-        hideOutOfBoundsPolygons(event.getSource());
+//        hideOutOfBoundsPolygonsOnePoint(event.getSource());
+        hideOutOfBoundsPolygonsAllPoint(event.getSource());
 
         return false;
     }
@@ -49,12 +50,14 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
             }
         }
 
-        hideOutOfBoundsPolygons(event.getSource());
+//        hideOutOfBoundsPolygonsOnePoint(event.getSource());
+        hideOutOfBoundsPolygonsAllPoint(event.getSource());
 
         return false;
     }
 
-    private void hideOutOfBoundsPolygons(MapView mapView) {
+    //Если хотя бы одна точка выходит за границы
+    private void hideOutOfBoundsPolygonsOnePoint(MapView mapView) {
         BoundingBox bounds = null;
         try {
             bounds = mapView.getBoundingBox();
@@ -88,6 +91,49 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
 
                     if (show && !overlay.isEnabled()) {
                         overlay.setEnabled(true);
+                    }
+                }
+            }
+        }
+    }
+
+    //Если все точки не видны
+    private void hideOutOfBoundsPolygonsAllPoint(MapView mapView) {
+        BoundingBox bounds = null;
+        try {
+            bounds = mapView.getBoundingBox();
+        } catch (NullPointerException npe) {
+            npe.printStackTrace();
+        }
+
+        if (bounds != null) {
+            for (Overlay overlay : getItems()) {
+                if (overlay instanceof SimplePolygon) {
+                    List<GeoPoint> points = ((SimplePolygon) overlay).getPoints();
+
+                    boolean show = false;
+
+                    for (GeoPoint point : points) {
+                        boolean inLatitudeBounds = point.getLatitude() < bounds.getLatNorth() &&
+                                point.getLatitude() > bounds.getLatSouth();
+
+                        boolean inLongitudeBounds = point.getLongitude() < bounds.getLonEast() &&
+                                point.getLongitude() > bounds.getLonWest();
+
+                        if (inLongitudeBounds && inLatitudeBounds) {
+                            show = true;
+                            break;
+                        }
+                    }
+
+                    if (show) {
+                        if (!overlay.isEnabled()) {
+                            overlay.setEnabled(true);
+                        }
+                    } else {
+                        if (overlay.isEnabled()) {
+                            overlay.setEnabled(false);
+                        }
                     }
                 }
             }

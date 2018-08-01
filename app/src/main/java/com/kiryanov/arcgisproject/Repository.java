@@ -47,16 +47,16 @@ public class Repository {
     private static final String URL_DISTRICTS = "https://gisro.donland.ru/api/vector_layers/1/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
     private static final String URL_SETTLEMENT = "http://192.168.202.136:7999/api/vector_layers/179/records/?polygonbox=POLYGON((45.4833984375%2051.364921488259526,%2045.4833984375%2044.6061127451739,%2035.496826171875%2044.6061127451739,%2035.496826171875%2051.364921488259526,45.4833984375%2051.364921488259526))";
 
-    public Observable<SimplePolygon> getDistricts(Context context, double tolerance) {
+    public Observable<List<SimplePolygon>> getDistricts(Context context, double tolerance) {
         return getGeoJson(context, URL_DISTRICTS, tolerance);
     }
 
-    public Observable<SimplePolygon> getSettlement(Context context, double tolerance) {
+    public Observable<List<SimplePolygon>> getSettlement(Context context, double tolerance) {
         return getGeoJson(context, URL_SETTLEMENT, tolerance);
     }
 
-    private Observable<SimplePolygon> getGeoJson(Context context, String url, double tolerance) {
-        Observable<SimplePolygon> main = Observable.fromCallable(() -> getRequest(url))
+    private Observable<List<SimplePolygon>> getGeoJson(Context context, String url, double tolerance) {
+        Observable<List<SimplePolygon>> main = Observable.fromCallable(() -> getRequest(url))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnNext(s -> Toast.makeText(context, "GeoJson loading", Toast.LENGTH_SHORT).show())
@@ -103,7 +103,8 @@ public class Repository {
 
                     return list;
                 })
-                .flatMap (Observable::fromIterable);
+                .flatMap(Observable::fromIterable)
+                .buffer(10);
 
 
         Observable<Long> interval = Observable.interval(500, TimeUnit.MILLISECONDS);

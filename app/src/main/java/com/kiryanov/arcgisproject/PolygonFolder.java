@@ -32,6 +32,15 @@ import java.util.List;
 
 public class PolygonFolder extends FolderOverlay implements MapListener {
 
+    @Override
+    public boolean onTouchEvent(MotionEvent e, MapView mapView) {
+        if (e.getAction() == MotionEvent.ACTION_UP) {
+            hideOutOfBoundsPolygons(mapView);
+//            Log.d("TAG", "onTouchEvent: UP");
+        }
+        return super.onTouchEvent(e, mapView);
+    }
+
     private GeometryFactory geometryFactory = new GeometryFactory();
 
     @Override

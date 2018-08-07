@@ -23,6 +23,8 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private Button button;
 
+    private PolygonFolder polygonFolder;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,6 +47,9 @@ public class MainActivity extends AppCompatActivity {
 
         mapView.getController().setZoom(8d);
         mapView.getController().setCenter(new GeoPoint(LAT, LNG));
+
+        polygonFolder = new PolygonFolder();
+        mapView.getOverlays().add(polygonFolder);
     }
 
     private void buttonClicked() {

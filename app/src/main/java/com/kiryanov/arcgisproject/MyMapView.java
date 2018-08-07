@@ -21,12 +21,12 @@ public class MyMapView extends MapView {
         super(context);
     }
 
-    @Override
+    /*@Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_UP) {
 
         }
 
         return super.onTouchEvent(event);
-    }
+    }*/
 }

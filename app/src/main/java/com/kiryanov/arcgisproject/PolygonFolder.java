@@ -1,5 +1,8 @@
 package com.kiryanov.arcgisproject;
 
+import android.util.Log;
+import android.view.MotionEvent;
+
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryCollection;
@@ -29,7 +32,6 @@ import java.util.List;
 
 public class PolygonFolder extends FolderOverlay implements MapListener {
 
-    private boolean simple = true;
     private GeometryFactory geometryFactory = new GeometryFactory();
 
     @Override
@@ -41,26 +43,6 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
 
     @Override
     public boolean onZoom(ZoomEvent event) {
-        if (event.getZoomLevel() > 11) {
-            if (simple) {
-                for (Overlay polygon: getItems()) {
-                    if (polygon instanceof SimplePolygon) {
-                        ((SimplePolygon) polygon).showOriginal();
-                    }
-                }
-                simple = false;
-            }
-        } else {
-            if (!simple) {
-                for (Overlay polygon: getItems()) {
-                    if (polygon instanceof  SimplePolygon) {
-                        ((SimplePolygon) polygon).showSimple();
-                    }
-                }
-                simple = true;
-            }
-        }
-
         onScreenChange(event);
 
         return false;
@@ -123,8 +105,8 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
 
         int count = 0;
         for (Overlay overlay : getItems()) {
-            if (overlay instanceof SimplePolygon) {
-                List<GeoPoint> points = ((SimplePolygon) overlay).getPoints();
+            if (overlay instanceof org.osmdroid.views.overlay.Polygon) {
+                List<GeoPoint> points = ((org.osmdroid.views.overlay.Polygon) overlay).getPoints();
                 List<Coordinate> coordinates = new ArrayList<>();
 
                 for (GeoPoint point : points) {
@@ -163,8 +145,8 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
 
         if (bounds != null) {
             for (Overlay overlay : getItems()) {
-                if (overlay instanceof SimplePolygon) {
-                    List<GeoPoint> points = ((SimplePolygon) overlay).getPoints();
+                if (overlay instanceof org.osmdroid.views.overlay.Polygon) {
+                    List<GeoPoint> points = ((org.osmdroid.views.overlay.Polygon) overlay).getPoints();
 
                     boolean show = true;
 
@@ -204,8 +186,8 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
 
         if (bounds != null) {
             for (Overlay overlay : getItems()) {
-                if (overlay instanceof SimplePolygon) {
-                    List<GeoPoint> points = ((SimplePolygon) overlay).getPoints();
+                if (overlay instanceof org.osmdroid.views.overlay.Polygon) {
+                    List<GeoPoint> points = ((org.osmdroid.views.overlay.Polygon) overlay).getPoints();
 
                     boolean show = false;
 

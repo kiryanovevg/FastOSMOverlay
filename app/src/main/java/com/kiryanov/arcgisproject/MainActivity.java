@@ -15,10 +15,8 @@ import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
-import org.osmdroid.views.overlay.FolderOverlay;
-import org.osmdroid.views.overlay.Overlay;
+import org.osmdroid.views.overlay.Polygon;
 
-import java.util.Collection;
 import java.util.List;
 
 import io.reactivex.Observer;
@@ -84,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
     private void initGeoJson() {
         if (disposable == null || disposable.isDisposed()) {
             Repository.getInstance().getDistricts(this, getToleranceForReduce())
-                    .subscribe(new Observer<List<SimplePolygon>>() {
+                    .subscribe(new Observer<List<Polygon>>() {
                         @Override
                         public void onSubscribe(Disposable d) {
                             disposable = d;
@@ -92,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         @Override
-                        public void onNext(List<SimplePolygon> polygon) {
+                        public void onNext(List<Polygon> polygon) {
                             polygonFolder.getItems().addAll(polygon);
                             mapView.invalidate();
                         }

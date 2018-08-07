@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import org.osmdroid.events.DelayedMapListener;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
@@ -76,13 +77,13 @@ public class MainActivity extends AppCompatActivity {
 
         polygonFolder = new PolygonFolder();
         mapView.getOverlays().add(polygonFolder);
-        mapView.addMapListener(polygonFolder);
+        mapView.addMapListener(new DelayedMapListener(polygonFolder, 200));
     }
 
     private Disposable disposable;
     private void initGeoJson() {
         if (disposable == null || disposable.isDisposed()) {
-            Repository.getInstance().getCustomPolygon(this, getToleranceForReduce())
+            Repository.getInstance().getDistricts(this, getToleranceForReduce())
                     .subscribe(new Observer<List<SimplePolygon>>() {
                         @Override
                         public void onSubscribe(Disposable d) {

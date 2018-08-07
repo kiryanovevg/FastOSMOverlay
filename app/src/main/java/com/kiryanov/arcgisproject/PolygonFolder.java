@@ -1,15 +1,26 @@
 package com.kiryanov.arcgisproject;
 
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryCollection;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LinearRing;
+import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.TopologyException;
+import org.locationtech.jts.geom.impl.CoordinateArraySequence;
+import org.osmdroid.api.IGeoPoint;
+import org.osmdroid.events.MapEvent;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.Projection;
 import org.osmdroid.views.overlay.FolderOverlay;
 import org.osmdroid.views.overlay.Overlay;
 
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -19,11 +30,11 @@ import java.util.List;
 public class PolygonFolder extends FolderOverlay implements MapListener {
 
     private boolean simple = true;
+    private GeometryFactory geometryFactory = new GeometryFactory();
 
     @Override
     public boolean onScroll(ScrollEvent event) {
-//        hideOutOfBoundsPolygonsOnePoint(event.getSource());
-        hideOutOfBoundsPolygonsAllPoint(event.getSource());
+        onScreenChange(event);
 
         return false;
     }
@@ -50,10 +61,95 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
             }
         }
 
-//        hideOutOfBoundsPolygonsOnePoint(event.getSource());
-        hideOutOfBoundsPolygonsAllPoint(event.getSource());
+        onScreenChange(event);
 
         return false;
+    }
+
+    private void onScreenChange(MapEvent event) {
+        MapView mapView = null;
+        if (event instanceof ScrollEvent) {
+            mapView = ((ScrollEvent) event).getSource();
+        }
+        if (event instanceof ZoomEvent) {
+            mapView = ((ZoomEvent) event).getSource();
+        }
+
+        if (mapView != null) {
+//            hideOutOfBoundsPolygonsOnePoint(mapView);
+//            hideOutOfBoundsPolygonsAllPoint(mapView);
+            hideOutOfBoundsPolygons(mapView);
+
+            mapView.invalidate();
+        }
+    }
+
+    private Polygon getScreenPolygon(MapView mapView) {
+        Projection projection = mapView.getProjection();
+
+        int width = projection.getScreenRect().width();
+        int height = projection.getScreenRect().height();
+
+        IGeoPoint leftTop = projection.fromPixels(0, 0);
+        IGeoPoint leftBottom = projection.fromPixels(0, height);
+        IGeoPoint rightTop = projection.fromPixels(width, 0);
+        IGeoPoint rightBottom = projection.fromPixels(width, height);
+
+        /*Log.d("GeoPoint", "leftTop:" + leftTop.toString());
+        Log.d("GeoPoint", "leftBottom:" + leftBottom.toString());
+        Log.d("GeoPoint", "rightTop:" + rightTop.toString());
+        Log.d("GeoPoint", "rightBottom:" + rightBottom.toString());
+        Log.d("GeoPoint", "------------");*/
+
+        return getPolygonFromCoordinates(new Coordinate[] {
+                new Coordinate(leftTop.getLatitude(), leftTop.getLongitude()),
+                new Coordinate(leftBottom.getLatitude(), leftBottom.getLongitude()),
+                new Coordinate(rightBottom.getLatitude(), rightBottom.getLongitude()),
+                new Coordinate(rightTop.getLatitude(), rightTop.getLongitude()),
+                new Coordinate(leftTop.getLatitude(), leftTop.getLongitude())
+        });
+    }
+
+    private Polygon getPolygonFromCoordinates(Coordinate[] coordinates) {
+        CoordinateArraySequence coordinateSequence = new CoordinateArraySequence(coordinates);
+        LinearRing linearRing = new LinearRing(coordinateSequence, geometryFactory);
+        Polygon result = new Polygon(linearRing, null, geometryFactory);
+
+        return result;
+    }
+
+    private void hideOutOfBoundsPolygons(MapView mapView) {
+        Polygon screen = getScreenPolygon(mapView);
+
+        int count = 0;
+        for (Overlay overlay : getItems()) {
+            if (overlay instanceof SimplePolygon) {
+                List<GeoPoint> points = ((SimplePolygon) overlay).getPoints();
+                List<Coordinate> coordinates = new ArrayList<>();
+
+                for (GeoPoint point : points) {
+                    coordinates.add(
+                            new Coordinate(point.getLatitude(), point.getLongitude())
+                    );
+                }
+
+                Polygon item = getPolygonFromCoordinates(
+                        coordinates.toArray(new Coordinate[coordinates.size()])
+                );
+
+                item.normalize();
+
+                try {
+//                    Geometry union = screen.union(item);
+                    overlay.setEnabled(screen.intersection(item).getCoordinates().length != 0);
+                } catch (TopologyException topologyException) {
+                    topologyException.printStackTrace();
+                    count++;
+                }
+            }
+        }
+
+        count = count;
     }
 
     //Если хотя бы одна точка выходит за границы

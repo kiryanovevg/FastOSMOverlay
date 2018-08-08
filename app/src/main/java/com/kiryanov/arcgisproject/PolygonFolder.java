@@ -1,11 +1,10 @@
 package com.kiryanov.arcgisproject;
 
-import android.util.Log;
+import android.graphics.Canvas;
+import android.os.Handler;
 import android.view.MotionEvent;
 
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryCollection;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.Polygon;
@@ -18,6 +17,7 @@ import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
+import org.osmdroid.util.PointReducer;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.Projection;
 import org.osmdroid.views.overlay.FolderOverlay;
@@ -33,6 +33,16 @@ import java.util.List;
 public class PolygonFolder extends FolderOverlay implements MapListener {
 
     private GeometryFactory geometryFactory = new GeometryFactory();
+
+    @Override
+    public boolean onTouchEvent(MotionEvent e, MapView mapView) {
+        if (e.getAction() == MotionEvent.ACTION_UP) {
+//            hideOutOfBoundsPolygons(mapView);
+
+            new Thread(() -> hideOutOfBoundsPolygons(mapView)).start();
+        }
+        return super.onTouchEvent(e, mapView);
+    }
 
     @Override
     public boolean onScroll(ScrollEvent event) {
@@ -60,7 +70,7 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
         if (mapView != null) {
 //            hideOutOfBoundsPolygonsOnePoint(mapView);
 //            hideOutOfBoundsPolygonsAllPoint(mapView);
-            hideOutOfBoundsPolygons(mapView);
+//            hideOutOfBoundsPolygons(mapView);
 
             mapView.invalidate();
         }
@@ -100,16 +110,20 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
         return result;
     }
 
-    private void hideOutOfBoundsPolygons(MapView mapView) {
+    private void hideOutOfBoundsPolygons(final MapView mapView) {
         Polygon screen = getScreenPolygon(mapView);
 
         int count = 0;
         for (Overlay overlay : getItems()) {
             if (overlay instanceof org.osmdroid.views.overlay.Polygon) {
-                List<GeoPoint> points = ((org.osmdroid.views.overlay.Polygon) overlay).getPoints();
+                ArrayList<GeoPoint> points = ((ArrayList<GeoPoint>) ((org.osmdroid.views.overlay.Polygon) overlay).getPoints());
                 List<Coordinate> coordinates = new ArrayList<>();
 
-                for (GeoPoint point : points) {
+                List<GeoPoint> reducedPoints = PointReducer.reduceWithTolerance(
+                        points, getToleranceForReduce(mapView)
+                );
+
+                for (GeoPoint point : reducedPoints) {
                     coordinates.add(
                             new Coordinate(point.getLatitude(), point.getLongitude())
                     );
@@ -123,7 +137,9 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
 
                 try {
 //                    Geometry union = screen.union(item);
-                    overlay.setEnabled(screen.intersection(item).getCoordinates().length != 0);
+                    new Handler().post(() -> {
+                        overlay.setEnabled(screen.intersection(item).getCoordinates().length != 0);
+                    });
                 } catch (TopologyException topologyException) {
                     topologyException.printStackTrace();
                     count++;
@@ -132,6 +148,13 @@ public class PolygonFolder extends FolderOverlay implements MapListener {
         }
 
         count = count;
+    }
+
+    private double getToleranceForReduce(MapView mapView) {
+        BoundingBox boundingBox = mapView.getBoundingBox();
+        final double latSpanDegrees = boundingBox.getLatitudeSpan();
+
+        return latSpanDegrees / mapView.getContext().getResources().getDisplayMetrics().densityDpi;
     }
 
     //Если хотя бы одна точка выходит за границы

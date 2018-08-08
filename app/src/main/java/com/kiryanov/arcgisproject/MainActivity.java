@@ -15,9 +15,11 @@ import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polygon;
 
 import java.util.List;
+import java.util.Random;
 
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
@@ -33,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private Button button;
 
 //    private FolderOverlay polygonOverlay;
-    private PolygonFolder polygonFolder;
+    private PolygonFolderTouch polygonFolder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,7 +47,8 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.loading);
         button = findViewById(R.id.button);
 
-        button.setOnClickListener(v -> initGeoJson());
+//        button.setOnClickListener(v -> initGeoJson());
+        button.setOnClickListener(v -> addMarkers());
 
         initMapView(savedInstanceState);
     }
@@ -73,15 +76,41 @@ public class MainActivity extends AppCompatActivity {
 //        polygonOverlay = new FolderOverlay();
 //        mapView.getOverlays().add(polygonOverlay);
 
-        polygonFolder = new PolygonFolder();
+        polygonFolder = new PolygonFolderTouch();
         mapView.getOverlays().add(polygonFolder);
-        mapView.addMapListener(new DelayedMapListener(polygonFolder, 200));
+//        mapView.addMapListener(new DelayedMapListener(polygonFolder, 200));
+    }
+
+    private double markerOffset = 0;
+    private void addMarkers() {
+        int count = 5000;
+
+        Random random = new Random();
+        int accuracy = 1000000;
+        double density = 0.5;
+
+        for (int i = 0; i < count; i++) {
+            double dispersionX = getDispersion(random.nextInt(), accuracy, density);
+            double dispersionY = getDispersion(random.nextInt(), accuracy, density);
+
+            Marker marker = new Marker(mapView);
+            marker.setIcon(getResources().getDrawable(R.drawable.moreinfo_arrow));
+            marker.setPosition(new GeoPoint(
+                    LAT + dispersionX + markerOffset, LNG + dispersionY
+            ));
+
+            mapView.getOverlays().add(marker);
+        }
+
+        if (markerOffset > 80) markerOffset = -80;
+        markerOffset += density;
+        button.setText(String.valueOf(Integer.parseInt(button.getText().toString()) + count));
     }
 
     private Disposable disposable;
     private void initGeoJson() {
         if (disposable == null || disposable.isDisposed()) {
-            Repository.getInstance().getDistricts(this, getToleranceForReduce())
+            Repository.getInstance().getCustomPolygon(this, getToleranceForReduce())
                     .subscribe(new Observer<List<Polygon>>() {
                         @Override
                         public void onSubscribe(Disposable d) {
@@ -112,6 +141,11 @@ public class MainActivity extends AppCompatActivity {
         } else {
             showMessage("Already running");
         }
+    }
+
+    //X, Y
+    private double getDispersion(int random, int accuracy, double density) {
+        return (((double) random * random) / accuracy) % density;
     }
 
     private double getToleranceForReduce() {

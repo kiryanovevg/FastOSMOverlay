@@ -8,7 +8,10 @@
     tools:context="com.kiryanov.arcgisproject.MainActivity"
     >
 
-
+    <com.yandex.mapkit.mapview.MapView
+        android:id="@+id/mapview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,7 +20,7 @@
         >
 
         <Button
-            android:id="@+id/add_polygon"
+            android:id="@+id/button"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:background="#b6b6b6"
@@ -26,7 +29,7 @@
             android:visibility="gone"
             />
 
-        <Button
+        <!--<Button
             android:id="@+id/add_marker"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
@@ -44,7 +47,7 @@
             android:textColor="#000"
             android:text="0"
             android:visibility="visible"
-            />
+            />-->
 
     </LinearLayout>
 

@@ -4,11 +4,15 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 
+import com.yandex.mapkit.MapKitFactory;
+import com.yandex.mapkit.geometry.Point;
+import com.yandex.mapkit.map.CameraPosition;
+import com.yandex.mapkit.mapview.MapView;
+
 public class MainActivity extends AppCompatActivity {
 
-    private Button addPolygonBtn;
-    private Button addMarkerBtn;
-    private Button addGeoJsonBtn;
+    private Button button;
+    private MapView mapView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -17,28 +21,23 @@ public class MainActivity extends AppCompatActivity {
 
         initMapView();
 
-        addPolygonBtn = findViewById(R.id.add_polygon);
-        addMarkerBtn = findViewById(R.id.add_marker);
-        addGeoJsonBtn = findViewById(R.id.from_geo_json);
-
-        addPolygonBtn.setOnClickListener(v -> addPolygons());
-        addMarkerBtn.setOnClickListener(v -> addMarkers());
-        addGeoJsonBtn.setOnClickListener(v -> addFromGeoJson());
+        button = findViewById(R.id.button);
+        button.setOnClickListener(v -> {});
     }
 
     private void initMapView() {
+        MapKitFactory.setApiKey(getString(R.string.api_key));
+        MapKitFactory.initialize(this);
+        mapView = findViewById(R.id.mapview);
 
+        mapView.getMap().move(
+                new CameraPosition(
+                        new Point()
+                )
+        );
     }
 
-    private void addPolygons() {
-
-    }
-
-    private void addMarkers() {
-
-    }
-
-    private void addFromGeoJson() {
+    private void buttonClick() {
 
     }
 
@@ -49,17 +48,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
+    protected void onStart() {
+        MapKitFactory.getInstance().onStart();
+        mapView.onStart();
+
+        super.onStart();
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-    }
+    protected void onStop() {
+        MapKitFactory.getInstance().onStop();
+        mapView.onStop();
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
+        super.onStop();
     }
 }

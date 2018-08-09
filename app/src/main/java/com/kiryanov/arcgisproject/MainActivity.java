@@ -7,7 +7,6 @@ import android.widget.Button;
 import com.yandex.mapkit.MapKitFactory;
 import com.yandex.mapkit.geometry.Point;
 import com.yandex.mapkit.map.CameraPosition;
-import com.yandex.mapkit.map.Map;
 import com.yandex.mapkit.mapview.MapView;
 
 public class MainActivity extends AppCompatActivity {

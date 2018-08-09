@@ -9,6 +9,8 @@ import com.yandex.mapkit.geometry.Point;
 import com.yandex.mapkit.map.CameraPosition;
 import com.yandex.mapkit.mapview.MapView;
 
+import java.util.Random;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final double LAT = 47.2;
@@ -29,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
         initMapView();
 
         button = findViewById(R.id.button);
-        button.setOnClickListener(v -> {});
+        button.setOnClickListener(v -> buttonClick());
     }
 
     private void initMapView() {
@@ -41,7 +43,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void buttonClick() {
-        mapView.getMap().getMapObjects().addCollection().addPlacemark(new Point());
+        addMarkers();
+    }
+
+    private double markerOffset = 0;
+    private void addMarkers() {
+        int count = 1000;
+
+        Random random = new Random();
+        int accuracy = 1000000;
+        double density = 0.5;
+
+        for (int i = 0; i < count; i++) {
+            double dispersionX = getDispersion(random.nextInt(), accuracy, density);
+            double dispersionY = getDispersion(random.nextInt(), accuracy, density);
+
+
+            mapView.getMap().getMapObjects().addCollection().addPlacemark(
+                    new Point(LAT + markerOffset + dispersionY, LNG + dispersionX)
+            );
+        }
+
+        if (markerOffset > 80) markerOffset = -80;
+        markerOffset += density;
+        button.setText(String.valueOf(Integer.parseInt(button.getText().toString()) + count));
+    }
+
+    private double getDispersion(int random, int accuracy, double density) {
+        return (((double) random * random) / accuracy) % density;
     }
 
     private void setButtonText(Button btn, int addable) {

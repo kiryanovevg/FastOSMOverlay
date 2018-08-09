@@ -8,10 +8,10 @@
     tools:context="com.kiryanov.arcgisproject.MainActivity"
     >
 
-    <com.yandex.mapkit.mapview.MapView
+    <!--<com.yandex.mapkit.mapview.MapView
         android:id="@+id/mapview"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"/>-->
 
     <LinearLayout
         android:layout_width="match_parent"

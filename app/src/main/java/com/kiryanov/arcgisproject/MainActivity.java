@@ -4,15 +4,13 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 
-import com.yandex.mapkit.MapKitFactory;
-import com.yandex.mapkit.geometry.Point;
-import com.yandex.mapkit.map.CameraPosition;
-import com.yandex.mapkit.mapview.MapView;
-
 public class MainActivity extends AppCompatActivity {
 
+    private static final double LAT = 47.2;
+    private static final double LNG = 39.7;
+
     private Button button;
-    private MapView mapView;
+//    private MapView mapView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,15 +24,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initMapView() {
-        MapKitFactory.setApiKey(getString(R.string.api_key));
+        /*MapKitFactory.setApiKey(getString(R.string.api_key));
         MapKitFactory.initialize(this);
         mapView = findViewById(R.id.mapview);
 
-        mapView.getMap().move(
-                new CameraPosition(
-                        new Point()
-                )
-        );
+        mapView.getMap().move(new CameraPosition(
+                new Point(LAT, LNG),
+                10f, 0f, 0f
+        ));*/
     }
 
     private void buttonClick() {
@@ -49,16 +46,16 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onStart() {
-        MapKitFactory.getInstance().onStart();
-        mapView.onStart();
+//        MapKitFactory.getInstance().onStart();
+//        mapView.onStart();
 
         super.onStart();
     }
 
     @Override
     protected void onStop() {
-        MapKitFactory.getInstance().onStop();
-        mapView.onStop();
+//        MapKitFactory.getInstance().onStop();
+//        mapView.onStop();
 
         super.onStop();
     }

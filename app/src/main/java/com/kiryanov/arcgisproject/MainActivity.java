@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void addPolygons() {
         if (disposable == null || disposable.isDisposed()) {
-            Repository.getInstance().getCustomPolygon(this)
+            Repository.getInstance().getDistricts(this)
                     .subscribe(new Observer<List<Polygon>>() {
                         @Override
                         public void onSubscribe(Disposable d) {

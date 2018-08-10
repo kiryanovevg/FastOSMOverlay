@@ -6,10 +6,15 @@ import android.widget.Button;
 
 import com.yandex.mapkit.MapKitFactory;
 import com.yandex.mapkit.geometry.Point;
+import com.yandex.mapkit.geometry.Polygon;
 import com.yandex.mapkit.map.CameraPosition;
 import com.yandex.mapkit.mapview.MapView;
 
+import java.util.List;
 import java.util.Random;
+
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -44,6 +49,32 @@ public class MainActivity extends AppCompatActivity {
 
     private void buttonClick() {
         addMarkers();
+        addPolygons();
+    }
+
+    private void addPolygons() {
+        Repository.getInstance().getCustomPolygon(this)
+                .subscribe(new Observer<List<Polygon>>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onNext(List<Polygon> polygons) {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onComplete() {
+
+                    }
+                });
     }
 
     private double markerOffset = 0;

@@ -86,7 +86,7 @@ public class Repository {
         JsonObject object = new JsonParser().parse(geoJson).getAsJsonObject();
         JsonArray features = object.getAsJsonArray("features");
 
-        int count = 600;
+        int count = 1000;
         double offsetX = 0;
         double offsetY = 0;
         double offsetChange = 1.0;

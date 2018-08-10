@@ -2,7 +2,10 @@ package com.kiryanov.arcgisproject;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import com.yandex.mapkit.MapKitFactory;
 import com.yandex.mapkit.geometry.Point;
@@ -21,7 +24,9 @@ public class MainActivity extends AppCompatActivity {
     private static final double LAT = 47.2;
     private static final double LNG = 39.7;
 
-    private Button button;
+    private Button btnPoints;
+    private Button btnPolygons;
+    private ProgressBar progressBar;
     private MapView mapView;
 
     @Override
@@ -35,8 +40,13 @@ public class MainActivity extends AppCompatActivity {
 
         initMapView();
 
-        button = findViewById(R.id.button);
-        button.setOnClickListener(v -> buttonClick());
+        progressBar = findViewById(R.id.progress_bar);
+
+        btnPoints = findViewById(R.id.btn_points);
+        btnPolygons = findViewById(R.id.btn_polygons);
+
+        btnPoints.setOnClickListener(v -> addMarkers());
+        btnPolygons.setOnClickListener(v -> addPolygons());
     }
 
     private void initMapView() {
@@ -47,37 +57,48 @@ public class MainActivity extends AppCompatActivity {
         ));
     }
 
-    private void buttonClick() {
-        addMarkers();
-        addPolygons();
-    }
+    private Disposable disposable;
 
     private void addPolygons() {
-        Repository.getInstance().getCustomPolygon(this)
-                .subscribe(new Observer<List<Polygon>>() {
-                    @Override
-                    public void onSubscribe(Disposable d) {
+        if (disposable == null || disposable.isDisposed()) {
+            Repository.getInstance().getCustomPolygon(this)
+                    .subscribe(new Observer<List<Polygon>>() {
+                        @Override
+                        public void onSubscribe(Disposable d) {
+                            disposable = d;
+                            progressBar.setVisibility(View.VISIBLE);
+                        }
 
-                    }
+                        @Override
+                        public void onNext(List<Polygon> polygons) {
+                            for (Polygon polygon : polygons) {
+                                mapView.getMap().getMapObjects().addPolygon(polygon);
+                            }
+                            setButtonText(btnPolygons, polygons.size());
+                        }
 
-                    @Override
-                    public void onNext(List<Polygon> polygons) {
+                        @Override
+                        public void onError(Throwable e) {
+                            progressBar.setVisibility(View.GONE);
+                            showMessage(e.getMessage());
+                            disposable.dispose();
 
-                    }
+                        }
 
-                    @Override
-                    public void onError(Throwable e) {
+                        @Override
+                        public void onComplete() {
+                            progressBar.setVisibility(View.GONE);
+                            disposable.dispose();
 
-                    }
-
-                    @Override
-                    public void onComplete() {
-
-                    }
-                });
+                        }
+                    });
+        } else {
+            showMessage("Already running");
+        }
     }
 
     private double markerOffset = 0;
+
     private void addMarkers() {
         int count = 1000;
 
@@ -97,11 +118,15 @@ public class MainActivity extends AppCompatActivity {
 
         if (markerOffset > 80) markerOffset = -80;
         markerOffset += density;
-        button.setText(String.valueOf(Integer.parseInt(button.getText().toString()) + count));
+        setButtonText(btnPoints, count);
     }
 
     private double getDispersion(int random, int accuracy, double density) {
         return (((double) random * random) / accuracy) % density;
+    }
+
+    private void showMessage(String msg) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
     private void setButtonText(Button btn, int addable) {

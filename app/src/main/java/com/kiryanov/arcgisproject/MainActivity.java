@@ -59,10 +59,6 @@ public class MainActivity extends AppCompatActivity {
         initMapView(savedInstanceState);
     }
 
-    private void clearMap() {
-
-    }
-
     private void initMapView(Bundle savedInstanceState) {
         mapView = findViewById(R.id.map_view);
         mapView.setBuiltInZoomControls(false);
@@ -92,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private double markerOffset = 0;
+
     private void addMarkers() {
         int count = 5000;
 
@@ -114,10 +111,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (markerOffset > 80) markerOffset = -80;
         markerOffset += density;
-        btnPoints.setText(String.valueOf(Integer.parseInt(btnPoints.getText().toString()) + count));
+        setButtonText(btnPoints, count);
     }
-
     private Disposable disposable;
+
     private void addPolygons() {
         if (disposable == null || disposable.isDisposed()) {
 //            Repository.getInstance().getCustomPolygon(this, 600)
@@ -133,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onNext(List<Polygon> polygon) {
                             polygonFolder.getItems().addAll(polygon);
                             mapView.invalidate();
+                            setButtonText(btnPoints, polygon.size());
                         }
 
                         @Override
@@ -153,6 +151,10 @@ public class MainActivity extends AppCompatActivity {
             showMessage("Already running");
         }
     }
+    private void clearMap() {
+        mapView.getOverlays().clear();
+        mapView.invalidate();
+    }
 
     //X, Y
     private double getDispersion(int random, int accuracy, double density) {
@@ -168,6 +170,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void showMessage(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+    }
+
+    private void setButtonText(Button btn, int addable) {
+        btn.setText(
+                String.valueOf(Integer.parseInt(btn.getText().toString()) + addable)
+        );
     }
 
     @Override

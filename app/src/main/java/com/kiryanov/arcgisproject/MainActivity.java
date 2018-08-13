@@ -9,6 +9,7 @@ import android.widget.Toast;
 
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.Marker;
 
 import static com.kiryanov.arcgisproject.Repository.LAT;
 import static com.kiryanov.arcgisproject.Repository.LNG;
@@ -52,12 +53,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void addPoints() {
-        int count = 10000;
+        int count = 1000;
 
         Repository.getInstance().addPoints(
-                count, mapView,
+                count,
+                this::addMarker,
                 () -> setButtonText(btnPoints, count)
         );
+    }
+
+    private void addMarker(double lat, double lng) {
+        Marker marker = new Marker(mapView);
+        marker.setIcon(
+                mapView.getContext().getResources().getDrawable(R.drawable.moreinfo_arrow)
+        );
+        marker.setPosition(new GeoPoint(lat, lng));
+        mapView.getOverlays().add(marker);
     }
 
     private void clearMap() {

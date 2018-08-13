@@ -32,7 +32,10 @@ public class MainActivity extends AppCompatActivity {
     private Handler handler;
     private MapView mapView;
     private ProgressBar progressBar;
-    private Button button;
+
+    private Button btnPoints;
+    private Button btnPolygons;
+    private Button btnClear;
 
 //    private FolderOverlay polygonOverlay;
     private PolygonFolderTouch polygonFolder;
@@ -44,13 +47,20 @@ public class MainActivity extends AppCompatActivity {
 
         handler = new Handler(getMainLooper());
 
-        progressBar = findViewById(R.id.loading);
-        button = findViewById(R.id.button);
+        progressBar = findViewById(R.id.progress_bar);
+        btnPoints = findViewById(R.id.btn_points);
+        btnPolygons = findViewById(R.id.btn_polygons);
+        btnClear = findViewById(R.id.btn_clear);
 
-//        button.setOnClickListener(v -> initGeoJson());
-        button.setOnClickListener(v -> addMarkers());
+        btnPoints.setOnClickListener(v -> addMarkers());
+        btnPolygons.setOnClickListener(v -> addPolygons());
+        btnClear.setOnClickListener(v -> clearMap());
 
         initMapView(savedInstanceState);
+    }
+
+    private void clearMap() {
+
     }
 
     private void initMapView(Bundle savedInstanceState) {
@@ -104,11 +114,11 @@ public class MainActivity extends AppCompatActivity {
 
         if (markerOffset > 80) markerOffset = -80;
         markerOffset += density;
-        button.setText(String.valueOf(Integer.parseInt(button.getText().toString()) + count));
+        btnPoints.setText(String.valueOf(Integer.parseInt(btnPoints.getText().toString()) + count));
     }
 
     private Disposable disposable;
-    private void initGeoJson() {
+    private void addPolygons() {
         if (disposable == null || disposable.isDisposed()) {
 //            Repository.getInstance().getCustomPolygon(this, 600)
             Repository.getInstance().getSettlement(this)

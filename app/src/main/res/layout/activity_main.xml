@@ -49,6 +49,22 @@
             android:visibility="gone"
             />
 
+        <View
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            />
+
+        <Button
+            android:id="@+id/btn_clear"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="#b6b6b6"
+            android:textColor="#000"
+            android:text="CLEAR"
+            android:visibility="visible"
+            />
+
     </LinearLayout>
 
 </LinearLayout>

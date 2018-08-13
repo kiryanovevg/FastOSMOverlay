@@ -26,6 +26,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Button btnPoints;
     private Button btnPolygons;
+    private Button btnClear;
+
     private ProgressBar progressBar;
     private MapView mapView;
 
@@ -44,9 +46,11 @@ public class MainActivity extends AppCompatActivity {
 
         btnPoints = findViewById(R.id.btn_points);
         btnPolygons = findViewById(R.id.btn_polygons);
+        btnClear = findViewById(R.id.btn_clear);
 
         btnPoints.setOnClickListener(v -> addMarkers());
         btnPolygons.setOnClickListener(v -> addPolygons());
+        btnClear.setOnClickListener(v -> clearMap());
     }
 
     private void initMapView() {
@@ -61,8 +65,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void addPolygons() {
         if (disposable == null || disposable.isDisposed()) {
-//            Repository.getInstance().getDistricts(this)
-            Repository.getInstance().getCustomPolygon(this, 600)
+            Repository.getInstance().getDistricts(this)
+//            Repository.getInstance().getCustomPolygon(this, 600)
                     .subscribe(new Observer<List<Polygon>>() {
                         @Override
                         public void onSubscribe(Disposable d) {
@@ -120,6 +124,10 @@ public class MainActivity extends AppCompatActivity {
         if (markerOffset > 80) markerOffset = -80;
         markerOffset += density;
         setButtonText(btnPoints, count);
+    }
+
+    private void clearMap() {
+        mapView.getMap().getMapObjects().clear();
     }
 
     private double getDispersion(int random, int accuracy, double density) {

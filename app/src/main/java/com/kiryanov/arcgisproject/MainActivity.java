@@ -154,6 +154,9 @@ public class MainActivity extends AppCompatActivity {
     private void clearMap() {
         mapView.getOverlays().clear();
         mapView.invalidate();
+
+        btnPoints.setText("0");
+        btnPolygons.setText("0");
     }
 
     //X, Y

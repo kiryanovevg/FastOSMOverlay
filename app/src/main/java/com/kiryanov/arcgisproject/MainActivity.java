@@ -65,8 +65,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void addPolygons() {
         if (disposable == null || disposable.isDisposed()) {
-            Repository.getInstance().getDistricts(this)
-//            Repository.getInstance().getCustomPolygon(this, 600)
+//            Repository.getInstance().getDistricts(this)
+            Repository.getInstance().getCustomPolygon(this, 600)
                     .subscribe(new Observer<List<Polygon>>() {
                         @Override
                         public void onSubscribe(Disposable d) {
@@ -128,6 +128,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void clearMap() {
         mapView.getMap().getMapObjects().clear();
+        btnPoints.setText("0");
+        btnPolygons.setText("0");
     }
 
     private double getDispersion(int random, int accuracy, double density) {

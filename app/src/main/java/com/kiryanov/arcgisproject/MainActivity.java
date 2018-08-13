@@ -117,8 +117,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void addPolygons() {
         if (disposable == null || disposable.isDisposed()) {
-//            Repository.getInstance().getCustomPolygon(this, 600)
-            Repository.getInstance().getSettlement(this)
+            Repository.getInstance().getCustomPolygon(this, 600)
+//            Repository.getInstance().getDistricts(this)
                     .subscribe(new Observer<List<Polygon>>() {
                         @Override
                         public void onSubscribe(Disposable d) {
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onNext(List<Polygon> polygon) {
                             polygonFolder.getItems().addAll(polygon);
                             mapView.invalidate();
-                            setButtonText(btnPoints, polygon.size());
+                            setButtonText(btnPolygons, polygon.size());
                         }
 
                         @Override

@@ -110,7 +110,8 @@ public class MainActivity extends AppCompatActivity {
     private Disposable disposable;
     private void initGeoJson() {
         if (disposable == null || disposable.isDisposed()) {
-            Repository.getInstance().getCustomPolygon(this, getToleranceForReduce())
+//            Repository.getInstance().getCustomPolygon(this, 600)
+            Repository.getInstance().getSettlement(this)
                     .subscribe(new Observer<List<Polygon>>() {
                         @Override
                         public void onSubscribe(Disposable d) {

@@ -1,10 +1,12 @@
 package com.kiryanov.arcgisproject.FastOverlay;
 
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.widget.Toast;
 
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.util.BoundingBox;
@@ -23,6 +25,7 @@ public class FastPointOverlay extends Overlay {
     private final FastPointOverlayOptions mStyle;
     private final PointAdapter mPointList;
     private final BoundingBox mBoundingBox;
+    private Context context;
     private Integer mSelectedPoint;
     private OnClickListener clickListener;
     private List<StyledLabelledPoint> gridIndex;
@@ -94,6 +97,11 @@ public class FastPointOverlay extends Overlay {
         this(pointList, FastPointOverlayOptions.getDefaultStyle());
     }
 
+    public FastPointOverlay(PointAdapter pointList, FastPointOverlayOptions style, Context context) {
+        this(pointList, style);
+        this.context = context;
+    }
+
     private void updateGrid(MapView mapView) {
         viewWid = mapView.getWidth();
         viewHei = mapView.getHeight();
@@ -150,25 +158,9 @@ public class FastPointOverlay extends Overlay {
                     && pt1.getLongitude() < viewBBox.getLonEast()) {
 
 
-                pj.toPixels(pt1, mPositionPixels);
+//                pj.toPixels(pt1, mPositionPixels);
+                Utils.coordinateToPixels(viewWid, viewHei, viewBBox, pt1, mPositionPixels);
 
-                //
-                /*double dx = viewBBox.getLonEast() - viewBBox.getLonWest();
-                double xRatio = pt1.getLongitude() - viewBBox.getLonWest();
-                if (xRatio <= 0)
-                    continue;
-                double xPercent = xRatio / dx;
-                int px = ((int) (viewWid * xPercent));
-
-                double dy = viewBBox.getLatNorth() - viewBBox.getLatSouth();
-                double yRatio = pt1.getLatitude() - viewBBox.getLatSouth();
-                if (yRatio <= 0)
-                    continue;
-                double yPercent = yRatio / dy;
-                int py = ((int) (viewHei * yPercent));
-
-                mPositionPixels.set(px, viewHei - py);*/
-                //
 
                 // test whether in this grid cell there is already a point, skip if yes
                 gridX = (int) Math.floor((float) mPositionPixels.x / mStyle.mCellSize);
@@ -270,6 +262,7 @@ public class FastPointOverlay extends Overlay {
         clickListener = listener;
     }
 
+    Toast toast;
     ArrayList<Long> times = new ArrayList<>();
     @Override
     public void draw(Canvas canvas, MapView mapView, boolean b) {
@@ -291,16 +284,26 @@ public class FastPointOverlay extends Overlay {
                         String TAG = "TIME";
 
                         long start = System.currentTimeMillis();
-                        computeGrid(mapView);
+
+                        computeGrid(mapView);//TEST
+
                         times.add(System.currentTimeMillis() - start);
-                        Log.d(TAG, "computeGrid: " + times.get(times.size()-1));
+                        String compute = "computeGrid: " + times.get(times.size()-1);
+                        Log.d(TAG, compute);
 
                         int amount = 0;
                         for (Long time : times) {
                             amount += time;
                         }
 
-                        Log.d(TAG, "Average time: " + (((float) amount) / times.size()));
+                        String average = "Average time: " + (((float) amount) / times.size());
+                        Log.d(TAG, average);
+
+                        if (toast != null) {
+                            toast.cancel();
+                        }
+                        toast = Toast.makeText(context, compute, Toast.LENGTH_SHORT);
+                        toast.show();
                     }
 
                     // compute the coordinates of each visible point in the new viewbox

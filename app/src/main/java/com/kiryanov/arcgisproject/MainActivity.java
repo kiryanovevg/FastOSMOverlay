@@ -7,9 +7,16 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.kiryanov.arcgisproject.FastOverlay.FastPointOverlay;
+import com.kiryanov.arcgisproject.FastOverlay.FastPointOverlayOptions;
+import com.kiryanov.arcgisproject.FastOverlay.PointTheme;
+
+import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
-import org.osmdroid.views.overlay.Marker;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.kiryanov.arcgisproject.Repository.LAT;
 import static com.kiryanov.arcgisproject.Repository.LNG;
@@ -23,6 +30,8 @@ public class MainActivity extends AppCompatActivity {
     private Button btnPoints;
     private Button btnPolygons;
     private Button btnClear;
+
+    private List<IGeoPoint> geoPoints = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,10 +59,21 @@ public class MainActivity extends AppCompatActivity {
 
         mapView.getController().setZoom(8d);
         mapView.getController().setCenter(new GeoPoint(LAT, LNG));
+
+        FastPointOverlayOptions options = new FastPointOverlayOptions();
+        options.setSelectedRadius(0);
+
+        FastPointOverlay fastPointOverlay = new FastPointOverlay(
+                new PointTheme(geoPoints),
+                options.setAlgorithm(FastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION)
+//                getResources().getDrawable(R.drawable.moreinfo_arrow)
+        );
+
+        mapView.getOverlays().add(fastPointOverlay);
     }
 
     private void addPoints() {
-        int count = 1000;
+        int count = 10000;
 
         Repository.getInstance().addPoints(
                 count,
@@ -63,12 +83,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void addMarker(double lat, double lng) {
-        Marker marker = new Marker(mapView);
-        marker.setIcon(
-                mapView.getContext().getResources().getDrawable(R.drawable.moreinfo_arrow)
-        );
-        marker.setPosition(new GeoPoint(lat, lng));
-        mapView.getOverlays().add(marker);
+        /*geoPoints.add(new DrawableGeoPoint(
+                getResources().getDrawable(R.drawable.moreinfo_arrow),
+                lat, lng
+        ));*/
+
+        geoPoints.add(new GeoPoint(lat, lng));
     }
 
     private void clearMap() {

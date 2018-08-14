@@ -3,6 +3,7 @@ package com.kiryanov.arcgisproject;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
@@ -17,6 +18,9 @@ import org.osmdroid.views.MapView;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
 
 import static com.kiryanov.arcgisproject.Repository.LAT;
 import static com.kiryanov.arcgisproject.Repository.LNG;
@@ -46,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
         btnClear = findViewById(R.id.btn_clear);
 
         btnPoints.setOnClickListener(v -> addPoints());
-//        btnPolygons.setOnClickListener(v -> addPolygons());
+        btnPolygons.setOnClickListener(v -> addPointsFromGeoJson());
         btnClear.setOnClickListener(v -> clearMap());
 
         initMapView(savedInstanceState);
@@ -89,6 +93,33 @@ public class MainActivity extends AppCompatActivity {
         ));*/
 
         geoPoints.add(new GeoPoint(lat, lng));
+    }
+
+    private void addPointsFromGeoJson() {
+        Repository.getInstance().getPointsFromGeoJson(this)
+                .subscribe(new Observer<List<IGeoPoint>>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+                        progressBar.setVisibility(View.VISIBLE);
+                    }
+
+                    @Override
+                    public void onNext(List<IGeoPoint> pointList) {
+                        geoPoints.addAll(pointList);
+                        setButtonText(btnPolygons, pointList.size());
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        progressBar.setVisibility(View.GONE);
+                        showMessage(e.getMessage());
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        progressBar.setVisibility(View.GONE);
+                    }
+                });
     }
 
     private void clearMap() {

@@ -38,7 +38,7 @@
             android:background="#b6b6b6"
             android:textColor="#000"
             android:text="0"
-            android:visibility="gone"
+            android:visibility="visible"
             />
 
         <ProgressBar

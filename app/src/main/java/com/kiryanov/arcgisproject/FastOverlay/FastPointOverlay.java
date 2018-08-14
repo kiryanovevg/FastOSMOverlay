@@ -3,6 +3,7 @@ package com.kiryanov.arcgisproject.FastOverlay;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
+import android.util.Log;
 import android.view.MotionEvent;
 
 import org.osmdroid.api.IGeoPoint;
@@ -118,52 +119,77 @@ public class FastPointOverlay extends Overlay {
         startProjection = pMapView.getProjection();
 
         // do not compute grid if BBox is the same
-        if(viewBBox.getLatNorth() != prevBoundingBox.getLatNorth()
+        /*if(viewBBox.getLatNorth() != prevBoundingBox.getLatNorth()
                 || viewBBox.getLatSouth() != prevBoundingBox.getLatSouth()
                 || viewBBox.getLonWest() != prevBoundingBox.getLonWest()
                 || viewBBox.getLonEast() != prevBoundingBox.getLonEast()) {
 
-            prevBoundingBox = new BoundingBox(viewBBox.getLatNorth(), viewBBox.getLonEast()
-                    , viewBBox.getLatSouth(), viewBBox.getLonWest());
 
-            if (gridBool == null || viewHei != pMapView.getHeight() || viewWid != pMapView.getWidth()) {
-                updateGrid(pMapView);
-            } else {
-                // empty grid.
-                // TODO: we might leave the grid as it was before to avoid the "flickering"?
-                for (boolean[] row : gridBool)
-                    Arrays.fill(row, false);
-            }
+        }*/
 
-            int gridX, gridY;
-            final Point mPositionPixels = new Point();
-            final Projection pj = pMapView.getProjection();
-            gridIndex = new ArrayList<>();
-            numLabels = 0;
+        if (gridBool == null || viewHei != pMapView.getHeight() || viewWid != pMapView.getWidth()) {
+            updateGrid(pMapView);
+        } else {
+            // empty grid.
+            // TODO: we might leave the grid as it was before to avoid the "flickering"?
+            for (boolean[] row : gridBool)
+                Arrays.fill(row, false);
+        }
 
-            for (IGeoPoint pt1 : mPointList) {
-                if (pt1 == null) continue;
-                if (pt1.getLatitude() > viewBBox.getLatSouth()
-                        && pt1.getLatitude() < viewBBox.getLatNorth()
-                        && pt1.getLongitude() > viewBBox.getLonWest()
-                        && pt1.getLongitude() < viewBBox.getLonEast()) {
-                    pj.toPixels(pt1, mPositionPixels);
-                    // test whether in this grid cell there is already a point, skip if yes
-                    gridX = (int) Math.floor((float) mPositionPixels.x / mStyle.mCellSize);
-                    gridY = (int) Math.floor((float) mPositionPixels.y / mStyle.mCellSize);
-                    if (gridX >= gridWid || gridY >= gridHei || gridX < 0 || gridY < 0
+        int gridX, gridY;
+        final Point mPositionPixels = new Point();
+        final Projection pj = pMapView.getProjection();
+        gridIndex = new ArrayList<>();
+        numLabels = 0;
+
+        for (IGeoPoint pt1 : mPointList) {
+            if (pt1 == null) continue;
+            if (pt1.getLatitude() > viewBBox.getLatSouth()
+                    && pt1.getLatitude() < viewBBox.getLatNorth()
+                    && pt1.getLongitude() > viewBBox.getLonWest()
+                    && pt1.getLongitude() < viewBBox.getLonEast()) {
+
+
+                pj.toPixels(pt1, mPositionPixels);
+
+                //
+                /*double dx = viewBBox.getLonEast() - viewBBox.getLonWest();
+                double xRatio = pt1.getLongitude() - viewBBox.getLonWest();
+                if (xRatio <= 0)
+                    continue;
+                double xPercent = xRatio / dx;
+                int px = ((int) (viewWid * xPercent));
+
+                double dy = viewBBox.getLatNorth() - viewBBox.getLatSouth();
+                double yRatio = pt1.getLatitude() - viewBBox.getLatSouth();
+                if (yRatio <= 0)
+                    continue;
+                double yPercent = yRatio / dy;
+                int py = ((int) (viewHei * yPercent));
+
+                mPositionPixels.set(px, viewHei - py);*/
+                //
+
+                // test whether in this grid cell there is already a point, skip if yes
+                gridX = (int) Math.floor((float) mPositionPixels.x / mStyle.mCellSize);
+                gridY = (int) Math.floor((float) mPositionPixels.y / mStyle.mCellSize);
+                if (gridX >= gridWid || gridY >= gridHei || gridX < 0 || gridY < 0
                         || gridBool[gridX][gridY])
-                        continue;
-                    gridBool[gridX][gridY] = true;
-                    gridIndex.add(new StyledLabelledPoint(mPositionPixels
+                    continue;
+                gridBool[gridX][gridY] = true;
+                gridIndex.add(new StyledLabelledPoint(mPositionPixels
                         , mPointList.isLabelled() ? ((LabelledGeoPoint) pt1).getLabel() : null
                         , mPointList.isStyled() ? ((StyledLabelledGeoPoint) pt1).getPointStyle() : null
                         , mPointList.isStyled() ? ((StyledLabelledGeoPoint) pt1).getTextStyle() : null
-                    ));
-                    numLabels++;
-                }
+                ));
+                numLabels++;
             }
         }
+
+        prevBoundingBox = new BoundingBox(
+                viewBBox.getLatNorth(), viewBBox.getLonEast(),
+                viewBBox.getLatSouth(), viewBBox.getLonWest()
+        );
     }
 
     @Override
@@ -244,6 +270,7 @@ public class FastPointOverlay extends Overlay {
         clickListener = listener;
     }
 
+    ArrayList<Long> times = new ArrayList<>();
     @Override
     public void draw(Canvas canvas, MapView mapView, boolean b) {
         final BoundingBox viewBBox;
@@ -260,8 +287,21 @@ public class FastPointOverlay extends Overlay {
                     // recompute grid only on specific events - only onDraw but when not animating
                     // and not in the middle of a touch scroll gesture
 
-                    if (gridBool == null || (!hasMoved && !mapView.isAnimating()))
+                    if (gridBool == null || (!hasMoved && !mapView.isAnimating())) {
+                        String TAG = "TIME";
+
+                        long start = System.currentTimeMillis();
                         computeGrid(mapView);
+                        times.add(System.currentTimeMillis() - start);
+                        Log.d(TAG, "computeGrid: " + times.get(times.size()-1));
+
+                        int amount = 0;
+                        for (Long time : times) {
+                            amount += time;
+                        }
+
+                        Log.d(TAG, "Average time: " + (((float) amount) / times.size()));
+                    }
 
                     // compute the coordinates of each visible point in the new viewbox
                     IGeoPoint nw = new GeoPoint(startBoundingBox.getLatNorth(), startBoundingBox.getLonWest());

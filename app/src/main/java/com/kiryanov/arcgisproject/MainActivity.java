@@ -118,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onComplete() {
                         progressBar.setVisibility(View.GONE);
+                        mapView.invalidate();
                     }
                 });
     }

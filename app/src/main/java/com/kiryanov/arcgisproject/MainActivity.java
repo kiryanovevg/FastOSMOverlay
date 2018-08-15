@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         FastPointOverlay fastPointOverlay = new FastPointOverlay(
                 new PointTheme(geoPoints),
                 options.setAlgorithm(FastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION),
-                this
+                getResources().getDrawable(R.drawable.direction_arrow)
         );
 
         mapView.getOverlays().add(fastPointOverlay);

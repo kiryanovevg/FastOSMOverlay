@@ -1,12 +1,11 @@
 package com.kiryanov.arcgisproject.FastOverlay;
 
-import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
-import android.util.Log;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
-import android.widget.Toast;
 
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.util.BoundingBox;
@@ -25,7 +24,7 @@ public class FastPointOverlay extends Overlay {
     private final FastPointOverlayOptions mStyle;
     private final PointAdapter mPointList;
     private final BoundingBox mBoundingBox;
-    private Context context;
+    private Drawable drawable;
     private Integer mSelectedPoint;
     private OnClickListener clickListener;
     private List<StyledLabelledPoint> gridIndex;
@@ -97,9 +96,9 @@ public class FastPointOverlay extends Overlay {
         this(pointList, FastPointOverlayOptions.getDefaultStyle());
     }
 
-    public FastPointOverlay(PointAdapter pointList, FastPointOverlayOptions style, Context context) {
+    public FastPointOverlay(PointAdapter pointList, FastPointOverlayOptions style, Drawable drawable) {
         this(pointList, style);
-        this.context = context;
+        this.drawable = drawable;
     }
 
     private void updateGrid(MapView mapView) {
@@ -158,8 +157,8 @@ public class FastPointOverlay extends Overlay {
                     && pt1.getLongitude() < viewBBox.getLonEast()) {
 
 
-//                pj.toPixels(pt1, mPositionPixels);
-                Utils.coordinateToPixels(viewWid, viewHei, viewBBox, pt1, mPositionPixels);
+                pj.toPixels(pt1, mPositionPixels);
+//                Utils.coordinateToPixels(viewWid, viewHei, viewBBox, pt1, mPositionPixels);
 
 
                 // test whether in this grid cell there is already a point, skip if yes
@@ -262,8 +261,6 @@ public class FastPointOverlay extends Overlay {
         clickListener = listener;
     }
 
-    Toast toast;
-    ArrayList<Long> times = new ArrayList<>();
     @Override
     public void draw(Canvas canvas, MapView mapView, boolean b) {
         final BoundingBox viewBBox;
@@ -280,31 +277,8 @@ public class FastPointOverlay extends Overlay {
                     // recompute grid only on specific events - only onDraw but when not animating
                     // and not in the middle of a touch scroll gesture
 
-                    if (gridBool == null || (!hasMoved && !mapView.isAnimating())) {
-                        String TAG = "TIME";
-
-                        long start = System.currentTimeMillis();
-
-                        computeGrid(mapView);//TEST
-
-                        times.add(System.currentTimeMillis() - start);
-                        String compute = "computeGrid: " + times.get(times.size()-1);
-                        Log.d(TAG, compute);
-
-                        int amount = 0;
-                        for (Long time : times) {
-                            amount += time;
-                        }
-
-                        String average = "Average time: " + (((float) amount) / times.size());
-                        Log.d(TAG, average);
-
-                        if (toast != null) {
-                            toast.cancel();
-                        }
-                        toast = Toast.makeText(context, compute, Toast.LENGTH_SHORT);
-                        toast.show();
-                    }
+                    if (gridBool == null || (!hasMoved && !mapView.isAnimating()))
+                        computeGrid(mapView);
 
                     // compute the coordinates of each visible point in the new viewbox
                     IGeoPoint nw = new GeoPoint(startBoundingBox.getLatNorth(), startBoundingBox.getLonWest());
@@ -419,7 +393,7 @@ public class FastPointOverlay extends Overlay {
     }
 
     protected void drawPointAt(Canvas canvas, float x, float y, boolean showLabel, String label, Paint pointStyle, Paint textStyle) {
-        if(mStyle.mSymbol == FastPointOverlayOptions.Shape.CIRCLE)
+        /*if(mStyle.mSymbol == FastPointOverlayOptions.Shape.CIRCLE)
             canvas.drawCircle(x, y, mStyle.mCircleRadius, pointStyle);
         else
             canvas.drawRect(x - mStyle.mCircleRadius, y - mStyle.mCircleRadius
@@ -427,7 +401,8 @@ public class FastPointOverlay extends Overlay {
                     , pointStyle);
 
         if(showLabel && label != null)
-            canvas.drawText(label, x, y - mStyle.mCircleRadius - 5, textStyle);
+            canvas.drawText(label, x, y - mStyle.mCircleRadius - 5, textStyle);*/
 
+        canvas.drawBitmap(((BitmapDrawable) drawable).getBitmap(),x,y, null);
     }
 }

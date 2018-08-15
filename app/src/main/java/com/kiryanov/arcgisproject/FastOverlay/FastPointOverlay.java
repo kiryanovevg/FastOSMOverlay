@@ -157,8 +157,8 @@ public class FastPointOverlay extends Overlay {
                     && pt1.getLongitude() < viewBBox.getLonEast()) {
 
 
-                pj.toPixels(pt1, mPositionPixels);
-//                Utils.coordinateToPixels(viewWid, viewHei, viewBBox, pt1, mPositionPixels);
+//                pj.toPixels(pt1, mPositionPixels);
+                Utils.coordinateToPixels(viewWid, viewHei, viewBBox, pt1, mPositionPixels);
 
 
                 // test whether in this grid cell there is already a point, skip if yes

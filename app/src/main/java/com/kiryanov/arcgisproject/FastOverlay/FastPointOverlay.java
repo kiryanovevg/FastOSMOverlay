@@ -5,9 +5,14 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
+import android.os.Handler;
 import android.view.MotionEvent;
 
 import org.osmdroid.api.IGeoPoint;
+import org.osmdroid.events.DelayedMapListener;
+import org.osmdroid.events.MapListener;
+import org.osmdroid.events.ScrollEvent;
+import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
@@ -26,6 +31,7 @@ public class FastPointOverlay extends Overlay {
     private int gridWid, gridHei, viewWid, viewHei;
     private boolean gridBool[][];
     private boolean hasMoved = false;
+    private boolean hasFling = false;
     private BoundingBox boundingBox;
     private BoundingBox startBoundingBox;
     private Projection startProjection;
@@ -33,7 +39,7 @@ public class FastPointOverlay extends Overlay {
     private Bitmap icon;
     private int cellSize = 10;
 
-    public FastPointOverlay() {
+    public FastPointOverlay(MapView mapView) {
         pointList = new ArrayList<>();
 
         this.boundingBox = findBoundingBox();
@@ -43,6 +49,67 @@ public class FastPointOverlay extends Overlay {
                 : icon.getWidth() > icon.getHeight()
                     ? icon.getWidth() / 2
                     : icon.getHeight() / 2;
+
+        mapView.addMapListener(new DelayedMapListener(new MapListener() {
+            @Override
+            public boolean onScroll(ScrollEvent event) {
+                hasFling = false;
+                if (!hasMoved){
+                    computeGrid(event.getSource());
+                    event.getSource().invalidate();
+                }
+
+                return false;
+            }
+
+            @Override
+            public boolean onZoom(ZoomEvent event) {
+                return false;
+            }
+        }, 50));
+    }
+
+    @Override
+    public boolean onFling(MotionEvent pEvent1, MotionEvent pEvent2, float pVelocityX, float pVelocityY, MapView pMapView) {
+        hasFling = true;
+        return super.onFling(pEvent1, pEvent2, pVelocityX, pVelocityY, pMapView);
+    }
+
+    private Handler handler = new Handler();
+    private Runnable callback;
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event, final MapView mapView) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                startBoundingBox = mapView.getBoundingBox();
+                startProjection = mapView.getProjection();
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                hasMoved = true;
+                break;
+
+            case MotionEvent.ACTION_UP:
+                hasMoved = false;
+                startBoundingBox = mapView.getBoundingBox();
+                startProjection = mapView.getProjection();
+
+                if (callback != null) {
+                    handler.removeCallbacks(callback);
+                }
+
+                callback = () -> {
+                    if (!hasFling) {
+                        mapView.invalidate();
+                    }
+                };
+
+                handler.postDelayed(callback, 100);
+
+                break;
+        }
+        return false;
     }
 
     private void updateGrid(MapView mapView) {
@@ -92,28 +159,6 @@ public class FastPointOverlay extends Overlay {
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event, final MapView mapView) {
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                startBoundingBox = mapView.getBoundingBox();
-                startProjection = mapView.getProjection();
-                break;
-
-            case MotionEvent.ACTION_MOVE:
-                hasMoved = true;
-                break;
-
-            case MotionEvent.ACTION_UP:
-                hasMoved = false;
-                startBoundingBox = mapView.getBoundingBox();
-                startProjection = mapView.getProjection();
-                mapView.invalidate();
-                break;
-        }
-        return false;
-    }
-
-    @Override
     public void draw(Canvas canvas, MapView mapView, boolean b) {
         if (b) return;
         final Projection pj = mapView.getProjection();
@@ -122,7 +167,7 @@ public class FastPointOverlay extends Overlay {
         // recompute grid only on specific events - only onDraw but when not animating
         // and not in the middle of a touch scroll gesture
 
-        if (gridBool == null || (!hasMoved && !mapView.isAnimating()))
+        if (gridBool == null || (!hasFling && !hasMoved && !mapView.isAnimating()))
             computeGrid(mapView);
 
         // compute the coordinates of each visible point in the new viewbox

@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
         mapView.getController().setZoom(8d);
         mapView.getController().setCenter(new GeoPoint(LAT, LNG));
 
-        fastPointOverlay = new FastPointOverlay();
+        fastPointOverlay = new FastPointOverlay(mapView);
         fastPointOverlay.setIcon(
                 ((BitmapDrawable) getResources().getDrawable(R.drawable.direction_arrow)).getBitmap()
         );

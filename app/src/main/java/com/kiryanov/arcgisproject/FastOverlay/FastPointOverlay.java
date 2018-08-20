@@ -40,8 +40,8 @@ public class FastPointOverlay extends Overlay {
         cellSize = icon == null
                 ? 10
                 : icon.getWidth() > icon.getHeight()
-                    ? icon.getWidth()
-                    : icon.getHeight();
+                    ? icon.getWidth() / 2
+                    : icon.getHeight() / 2;
     }
 
     private void updateGrid(MapView mapView) {

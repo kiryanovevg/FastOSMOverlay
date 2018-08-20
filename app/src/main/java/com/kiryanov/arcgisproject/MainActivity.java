@@ -61,11 +61,12 @@ public class MainActivity extends AppCompatActivity {
         mapView.setBuiltInZoomControls(false);
         mapView.setMultiTouchControls(true);
 
-        mapView.getController().setZoom(8d);
+        mapView.getController().setZoom(6.5);
         mapView.getController().setCenter(new GeoPoint(LAT, LNG));
 
         FastPointOverlayOptions options = new FastPointOverlayOptions();
         options.setSelectedRadius(0);
+        options.setCellSize(12);
 
         FastPointOverlay fastPointOverlay = new FastPointOverlay(
                 new PointTheme(geoPoints),
@@ -96,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void addPointsFromGeoJson() {
-        Repository.getInstance().getPointsFromGeoJson(this)
+        Repository.getInstance().getPointsFromGeoJson(this, 3)
                 .subscribe(new Observer<List<IGeoPoint>>() {
                     @Override
                     public void onSubscribe(Disposable d) {

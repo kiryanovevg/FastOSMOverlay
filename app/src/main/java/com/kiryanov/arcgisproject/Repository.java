@@ -15,6 +15,7 @@ import org.osmdroid.views.overlay.Polygon;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,8 +32,8 @@ import io.reactivex.schedulers.Schedulers;
 
 public class Repository {
 
-    public static final double LAT = 47.2;
-    public static final double LNG = 39.7;
+    public static final double LAT = 48.1699173297742;
+    public static final double LNG = 42.183102514048386;
 
     private static Repository instance;
 
@@ -80,7 +81,9 @@ public class Repository {
         return (((double) random * random) / accuracy) % density;
     }
 
-    public Observable<List<IGeoPoint>> getPointsFromGeoJson(Context context) {
+    private double pointOffset = 0;
+
+    public Observable<List<IGeoPoint>> getPointsFromGeoJson(Context context, int count) {
 
         Observable<List<IGeoPoint>> main = Observable.fromCallable(() -> getRequest(URL_DISTRICTS))
                 .subscribeOn(Schedulers.io())
@@ -92,27 +95,31 @@ public class Repository {
                     JsonArray features = object.getAsJsonArray("features");
 
                     List<IGeoPoint> geoPoints = new ArrayList<>();
-                    for (JsonElement fe : features) {
-                        JsonObject fo = fe.getAsJsonObject();
+                    for (int i = 0; i < count; i++) {
+                        for (JsonElement fe : features) {
+                            JsonObject fo = fe.getAsJsonObject();
 
-                        JsonArray coordinates = fo
-                                .getAsJsonObject("geometry")
-                                .getAsJsonArray("coordinates")
-                                .get(0).getAsJsonArray();
+                            JsonArray coordinates = fo
+                                    .getAsJsonObject("geometry")
+                                    .getAsJsonArray("coordinates")
+                                    .get(0).getAsJsonArray();
 
-                        for (JsonElement element : coordinates) {
-                            JsonArray coord = element.getAsJsonArray();
+                            for (JsonElement element : coordinates) {
+                                JsonArray coord = element.getAsJsonArray();
 
-                            JsonElement first = coord.get(0);
-                            JsonElement second = coord.get(1);
+                                JsonElement first = coord.get(0);
+                                JsonElement second = coord.get(1);
 
-                            if (first.isJsonPrimitive() && second.isJsonPrimitive()) {
-                                geoPoints.add(new GeoPoint(
-                                        second.getAsDouble(),
-                                        first.getAsDouble()
-                                ));
+                                if (first.isJsonPrimitive() && second.isJsonPrimitive()) {
+                                    geoPoints.add(new GeoPoint(
+                                            second.getAsDouble() + pointOffset,
+                                            first.getAsDouble() + pointOffset
+                                    ));
+                                }
                             }
                         }
+
+                        pointOffset += 2;
                     }
 
                     return geoPoints;

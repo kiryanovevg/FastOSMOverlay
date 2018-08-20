@@ -1,5 +1,6 @@
 package com.kiryanov.arcgisproject;
 
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
@@ -64,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
         fastPointOverlay = new FastPointOverlay(
                 mapView,
-                getResources().getDrawable(R.drawable.direction_arrow)
+                ((BitmapDrawable) getResources().getDrawable(R.drawable.direction_arrow)).getBitmap()
         );
 
         mapView.getOverlays().add(fastPointOverlay);

@@ -9,14 +9,11 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.kiryanov.arcgisproject.FastOverlay.FastPointOverlay;
-import com.kiryanov.arcgisproject.FastOverlay.FastPointOverlayOptions;
-import com.kiryanov.arcgisproject.FastOverlay.PointTheme;
 
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import io.reactivex.Observer;
@@ -33,9 +30,10 @@ public class MainActivity extends AppCompatActivity {
 
     private Button btnPoints;
     private Button btnPolygons;
-    private Button btnClear;
+    private Button btnInvalidate;
 
-    private List<IGeoPoint> geoPoints = new ArrayList<>();
+//    private List<IGeoPoint> geoPoints = new ArrayList<>();
+    private FastPointOverlay fastPointOverlay;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,11 +45,11 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progress_bar);
         btnPoints = findViewById(R.id.btn_points);
         btnPolygons = findViewById(R.id.btn_polygons);
-        btnClear = findViewById(R.id.btn_clear);
+        btnInvalidate = findViewById(R.id.btn_invalidate);
 
         btnPoints.setOnClickListener(v -> addPoints());
         btnPolygons.setOnClickListener(v -> addPointsFromGeoJson());
-        btnClear.setOnClickListener(v -> clearMap());
+        btnInvalidate.setOnClickListener(v -> invalidateMap());
 
         initMapView(savedInstanceState);
     }
@@ -64,12 +62,8 @@ public class MainActivity extends AppCompatActivity {
         mapView.getController().setZoom(8d);
         mapView.getController().setCenter(new GeoPoint(LAT, LNG));
 
-        FastPointOverlayOptions options = new FastPointOverlayOptions();
-        options.setSelectedRadius(0);
-
-        FastPointOverlay fastPointOverlay = new FastPointOverlay(
-                new PointTheme(geoPoints),
-                options.setAlgorithm(FastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION),
+        fastPointOverlay = new FastPointOverlay(
+                mapView,
                 getResources().getDrawable(R.drawable.direction_arrow)
         );
 
@@ -92,7 +86,8 @@ public class MainActivity extends AppCompatActivity {
                 lat, lng
         ));*/
 
-        geoPoints.add(new GeoPoint(lat, lng));
+//        geoPoints.add(new GeoPoint(lat, lng));
+        fastPointOverlay.add(new GeoPoint(lat, lng));
     }
 
     private void addPointsFromGeoJson() {
@@ -105,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onNext(List<IGeoPoint> pointList) {
-                        geoPoints.addAll(pointList);
+                        fastPointOverlay.addAll(pointList);
                         setButtonText(btnPolygons, pointList.size());
                     }
 
@@ -123,12 +118,12 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    private void clearMap() {
-        mapView.getOverlays().clear();
+    private void invalidateMap() {
+//        mapView.getOverlays().clear();
         mapView.invalidate();
 
-        btnPoints.setText("0");
-        btnPolygons.setText("0");
+//        btnPoints.setText("0");
+//        btnPolygons.setText("0");
     }
 
     private void showMessage(String msg) {

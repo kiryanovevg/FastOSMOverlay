@@ -65,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
         fastPointOverlay = new FastPointOverlay(
                 mapView,
+//                null
                 ((BitmapDrawable) getResources().getDrawable(R.drawable.direction_arrow)).getBitmap()
         );
 

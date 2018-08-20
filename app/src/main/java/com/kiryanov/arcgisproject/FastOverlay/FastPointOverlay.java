@@ -13,41 +13,85 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.Projection;
 import org.osmdroid.views.overlay.Overlay;
-import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay;
-import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Created by Evgeniy on 20.08.18.
- */
-
 public class FastPointOverlay extends Overlay {
 
-    protected List<IGeoPoint> pointList;
-    protected List<Point> gridIndex;
-    protected boolean[][] gridBool;
+    private List<IGeoPoint> pointList;
+    private List<Point> gridIndex;
 
-    protected Bitmap icon;
-    protected boolean hasMoved;
-    protected int viewWid, viewHei;
-    protected int gridWid, gridHei;
+    private int gridWid, gridHei, viewWid, viewHei;
+    private boolean gridBool[][];
+    private boolean hasMoved = false;
+    private BoundingBox startBoundingBox;
+    private Projection startProjection;
 
-    protected BoundingBox startBoundingBox;
-    protected Projection startProjection;
-
-    protected int mCellSize = 10;
+    private Bitmap icon;
+    private int cellSize = 10;
 
     public FastPointOverlay(MapView mapView, Bitmap icon) {
         pointList = new ArrayList<>();
 
         this.icon = icon;
+
+        cellSize = icon == null
+                ? 10
+                : icon.getWidth() > icon.getHeight()
+                    ? icon.getWidth()
+                    : icon.getHeight();
+    }
+
+    private void updateGrid(MapView mapView) {
+        viewWid = mapView.getWidth();
+        viewHei = mapView.getHeight();
+        gridWid = (int) Math.floor((float) viewWid / cellSize) + 1;
+        gridHei = (int) Math.floor((float) viewHei / cellSize) + 1;
+        gridBool = new boolean[gridWid][gridHei];
+    }
+
+    private void computeGrid(final MapView pMapView) {
+        BoundingBox viewBBox = pMapView.getBoundingBox();
+
+        startBoundingBox = viewBBox;
+        startProjection = pMapView.getProjection();
+
+        if (gridBool == null || viewHei != pMapView.getHeight() || viewWid != pMapView.getWidth()) {
+            updateGrid(pMapView);
+        } else {
+            for (boolean[] row : gridBool)
+                Arrays.fill(row, false);
+        }
+
+        int gridX, gridY;
+        final Point mPositionPixels = new Point();
+        gridIndex = new ArrayList<>();
+
+        for (IGeoPoint pt1 : pointList) {
+            if (pt1 == null) continue;
+            if (pt1.getLatitude() > viewBBox.getLatSouth()
+                    && pt1.getLatitude() < viewBBox.getLatNorth()
+                    && pt1.getLongitude() > viewBBox.getLonWest()
+                    && pt1.getLongitude() < viewBBox.getLonEast()) {
+
+                Utils.coordinateToPixels(viewWid, viewHei, viewBBox, pt1, mPositionPixels);
+
+                // test whether in this grid cell there is already a point, skip if yes
+                gridX = (int) Math.floor((float) mPositionPixels.x / cellSize);
+                gridY = (int) Math.floor((float) mPositionPixels.y / cellSize);
+                if (gridX >= gridWid || gridY >= gridHei || gridX < 0 || gridY < 0
+                        || gridBool[gridX][gridY])
+                    continue;
+                gridBool[gridX][gridY] = true;
+                gridIndex.add(new Point(mPositionPixels));
+            }
+        }
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event, MapView mapView) {
+    public boolean onTouchEvent(MotionEvent event, final MapView mapView) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 startBoundingBox = mapView.getBoundingBox();
@@ -69,10 +113,13 @@ public class FastPointOverlay extends Overlay {
     }
 
     @Override
-    public void draw(Canvas canvas, MapView mapView, boolean shadow) {
-        final BoundingBox viewBBox = mapView.getBoundingBox();
-        final Point mPositionPixels = new Point();
+    public void draw(Canvas canvas, MapView mapView, boolean b) {
+        if (b) return;
         final Projection pj = mapView.getProjection();
+
+        // optimized for speed, recommended for > 10k points
+        // recompute grid only on specific events - only onDraw but when not animating
+        // and not in the middle of a touch scroll gesture
 
         if (gridBool == null || (!hasMoved && !mapView.isAnimating()))
             computeGrid(mapView);
@@ -88,7 +135,7 @@ public class FastPointOverlay extends Overlay {
         float tx, ty;
         
         // draw points
-        for (Point point : gridIndex) {
+        for (Point point: gridIndex) {
             tx = (point.x * dd.x) / pStartSe.x;
             ty = (point.y * dd.y) / pStartSe.y;
 
@@ -98,69 +145,23 @@ public class FastPointOverlay extends Overlay {
 
     protected void drawPointAt(Canvas canvas, float x, float y) {
         if (icon != null) {
-            canvas.drawBitmap(
-                    icon,
-                    x - icon.getWidth() / 2,
-                    y - icon.getHeight() / 2,
-                    null
-            );
+            canvas.drawBitmap(icon, x, y, null);
         } else {
             Paint paint = new Paint();
-            paint.setStrokeWidth(5);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setColor(Color.parseColor("#ffff00"));
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.RED);
 
             canvas.drawRect(
-                    x, y, x + 10, y + 10, paint
+                    x - cellSize/2,
+                    y - cellSize/2,
+                    x + cellSize/2,
+                    y + cellSize/2,
+                    paint
             );
         }
     }
 
-    private void computeGrid(final MapView pMapView) {
-        final BoundingBox viewBBox = pMapView.getBoundingBox();
-        startBoundingBox = viewBBox;
-        startProjection = pMapView.getProjection();
-
-        if (viewHei != pMapView.getHeight() || viewWid != pMapView.getWidth()) {
-            updateGrid(pMapView);
-        }
-
-        int gridX, gridY;
-        final Point mPositionPixels = new Point();
-        final Projection pj = pMapView.getProjection();
-        gridIndex = new ArrayList<>();
-
-        for (IGeoPoint pt1 : pointList) {
-            if (pt1 == null) continue;
-            if (pt1.getLatitude() > viewBBox.getLatSouth()
-                    && pt1.getLatitude() < viewBBox.getLatNorth()
-                    && pt1.getLongitude() > viewBBox.getLonWest()
-                    && pt1.getLongitude() < viewBBox.getLonEast()) {
-                Utils.coordinateToPixels(viewWid, viewHei ,viewBBox, pt1, mPositionPixels);
-                // test whether in this grid cell there is already a point, skip if yes
-                gridX = (int) Math.floor((float) mPositionPixels.x / mCellSize);
-                gridY = (int) Math.floor((float) mPositionPixels.y / mCellSize);
-                if (gridX >= gridWid || gridY >= gridHei || gridX < 0 || gridY < 0
-                        || gridBool[gridX][gridY])
-                    continue;
-                gridBool[gridX][gridY] = true;
-                gridIndex.add(new Point(mPositionPixels));
-            }
-        }
-    }
-
-    private void updateGrid(MapView mapView) {
-        viewWid = mapView.getWidth();
-        viewHei = mapView.getHeight();
-        gridWid = (int) Math.floor((float) viewWid / mCellSize) + 1;
-        gridHei = (int) Math.floor((float) viewHei / mCellSize) + 1;
-        gridBool = new boolean[gridWid][gridHei];
-
-        // TODO the measures on first draw are not the final values.
-        // MapView should propagate onLayout to overlays
-    }
-
-    public void add(GeoPoint point) {
+    public void add(IGeoPoint point) {
         pointList.add(point);
     }
 

@@ -26,16 +26,17 @@ public class FastPointOverlay extends Overlay {
     private int gridWid, gridHei, viewWid, viewHei;
     private boolean gridBool[][];
     private boolean hasMoved = false;
+    private BoundingBox boundingBox;
     private BoundingBox startBoundingBox;
     private Projection startProjection;
 
     private Bitmap icon;
     private int cellSize = 10;
 
-    public FastPointOverlay(MapView mapView, Bitmap icon) {
+    public FastPointOverlay() {
         pointList = new ArrayList<>();
 
-        this.icon = icon;
+        this.boundingBox = findBoundingBox();
 
         cellSize = icon == null
                 ? 10
@@ -161,11 +162,35 @@ public class FastPointOverlay extends Overlay {
         }
     }
 
+    private BoundingBox findBoundingBox() {
+        Double east = null, west = null, north = null, south = null;
+        for(IGeoPoint p : pointList) {
+            if(p == null) continue;
+            if(east == null || p.getLongitude() > east) east = p.getLongitude();
+            if(west == null || p.getLongitude() < west) west = p.getLongitude();
+            if(north == null || p.getLatitude() > north) north = p.getLatitude();
+            if(south == null || p.getLatitude() < south) south = p.getLatitude();
+        }
+
+        if(east != null)
+            return new BoundingBox(north, east, south, west);
+        else
+            return null;
+    }
+
     public void add(IGeoPoint point) {
         pointList.add(point);
     }
 
     public void addAll(List<IGeoPoint> pointList) {
         this.pointList.addAll(pointList);
+    }
+
+    public BoundingBox getBoundingBox() {
+        return boundingBox;
+    }
+
+    public void setIcon(Bitmap icon) {
+        this.icon = icon;
     }
 }

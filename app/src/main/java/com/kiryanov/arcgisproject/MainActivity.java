@@ -9,6 +9,7 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.kiryanov.arcgisproject.FastOverlay.FastPointCluster;
 import com.kiryanov.arcgisproject.FastOverlay.FastPointOverlay;
 
 import org.osmdroid.api.IGeoPoint;
@@ -34,7 +35,8 @@ public class MainActivity extends AppCompatActivity {
     private Button btnInvalidate;
 
 //    private List<IGeoPoint> geoPoints = new ArrayList<>();
-    private FastPointOverlay fastPointOverlay;
+//    private FastPointOverlay fastPointOverlay;
+    private FastPointCluster fastPointCluster;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,12 +65,15 @@ public class MainActivity extends AppCompatActivity {
         mapView.getController().setZoom(8d);
         mapView.getController().setCenter(new GeoPoint(LAT, LNG));
 
-        fastPointOverlay = new FastPointOverlay(mapView);
-        fastPointOverlay.setIcon(
-                ((BitmapDrawable) getResources().getDrawable(R.drawable.direction_arrow)).getBitmap()
-        );
+//        fastPointOverlay = new FastPointOverlay(mapView);
+//        fastPointOverlay.setIcon(
+//                ((BitmapDrawable) getResources().getDrawable(R.drawable.direction_arrow)).getBitmap()
+//        );
 
-        mapView.getOverlays().add(fastPointOverlay);
+        fastPointCluster = new FastPointCluster(mapView);
+
+//        mapView.getOverlays().add(fastPointOverlay);
+        mapView.getOverlays().add(fastPointCluster);
     }
 
     private void addPoints() {
@@ -88,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
         ));*/
 
 //        geoPoints.add(new GeoPoint(lat, lng));
-        fastPointOverlay.add(new GeoPoint(lat, lng));
+        fastPointCluster.add(new GeoPoint(lat, lng));
     }
 
     private void addPointsFromGeoJson() {
@@ -101,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onNext(List<IGeoPoint> pointList) {
-                        fastPointOverlay.addAll(pointList);
+                        fastPointCluster.addAll(pointList);
                         setButtonText(btnPolygons, pointList.size());
                     }
 

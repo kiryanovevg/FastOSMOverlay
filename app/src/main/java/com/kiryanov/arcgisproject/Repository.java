@@ -10,7 +10,6 @@ import com.google.gson.JsonParser;
 
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.util.GeoPoint;
-import org.osmdroid.views.overlay.Polygon;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -118,7 +117,7 @@ public class Repository {
                     return geoPoints;
                 })
                 .flatMap(Observable::fromIterable)
-                .buffer(10000);
+                .buffer(10000);//.take(1);
 
 
         Observable<Long> interval = Observable.interval(500, TimeUnit.MILLISECONDS);

@@ -117,10 +117,11 @@ public class Repository {
                     return geoPoints;
                 })
                 .flatMap(Observable::fromIterable)
-                .buffer(10000);//.take(1);
+                .buffer(10000).take(2);
 
 
-        Observable<Long> interval = Observable.interval(500, TimeUnit.MILLISECONDS);
+        Observable<Long> interval = Observable.interval(0, TimeUnit.MILLISECONDS);
+//        Observable<Long> interval = Observable.interval(500, TimeUnit.MILLISECONDS);
 
         return Observable.zip(main, interval, (overlay, aLong) -> overlay)
                 .observeOn(AndroidSchedulers.mainThread());

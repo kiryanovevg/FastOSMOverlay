@@ -9,6 +9,7 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.kiryanov.arcgisproject.Clustering.NonHierarchicalDistanceBasedAlgorithm;
 import com.kiryanov.arcgisproject.FastOverlay.FastPointCluster;
 import com.kiryanov.arcgisproject.FastOverlay.FastPointOverlay;
 
@@ -17,6 +18,7 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 
 import java.util.List;
+import java.util.Set;
 
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
@@ -96,6 +98,8 @@ public class MainActivity extends AppCompatActivity {
         fastPointCluster.add(new GeoPoint(lat, lng));
     }
 
+    NonHierarchicalDistanceBasedAlgorithm<IGeoPoint> cluster = new NonHierarchicalDistanceBasedAlgorithm<>();
+
     private void addPointsFromGeoJson() {
         Repository.getInstance().getPointsFromGeoJson(this)
                 .subscribe(new Observer<List<IGeoPoint>>() {
@@ -106,7 +110,9 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onNext(List<IGeoPoint> pointList) {
-                        fastPointCluster.addAll(pointList);
+                        cluster.addItems(pointList);
+
+//                        fastPointCluster.addAll(pointList);
                         setButtonText(btnPolygons, pointList.size());
                     }
 
@@ -126,7 +132,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void invalidateMap() {
 //        mapView.getOverlays().clear();
-        mapView.invalidate();
+
+        /*mapView.invalidate();*/
+        double zoomLevel = mapView.getZoomLevelDouble();
+        Set set = cluster.getClusters(zoomLevel);
 
 //        btnPoints.setText("0");
 //        btnPolygons.setText("0");

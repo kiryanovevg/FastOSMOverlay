@@ -6,10 +6,15 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.os.Handler;
+import android.util.Log;
 import android.view.MotionEvent;
-import android.widget.Toast;
 
 import org.osmdroid.api.IGeoPoint;
+import org.osmdroid.events.DelayedMapListener;
+import org.osmdroid.events.MapListener;
+import org.osmdroid.events.ScrollEvent;
+import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
@@ -24,25 +29,24 @@ import java.util.List;
 public class FastPointCluster extends Overlay {
 
     private List<IGeoPoint> pointList;
-    private List<IGeoPoint> cloneList;
-    private List<Point> gridIndex;
     private List<List<IGeoPoint>> clusters;
+    private List<Point> gridIndex;
 
     private int gridWid, gridHei, viewWid, viewHei;
     private boolean gridBool[][];
     private boolean hasMoved = false;
+    private boolean hasFling = false;
     private BoundingBox boundingBox;
     private BoundingBox startBoundingBox;
     private Projection startProjection;
+    private int zoomLevel = -1;
+    private boolean added = false;
 
     private Bitmap icon;
     private int cellSize = 10;
 
-    private int zoomLevel;
-
     public FastPointCluster(MapView mapView) {
         pointList = new ArrayList<>();
-        cloneList = new ArrayList<>();
         clusters = new ArrayList<>();
 
         this.boundingBox = findBoundingBox();
@@ -57,13 +61,6 @@ public class FastPointCluster extends Overlay {
     @Override
     public void onDetach(MapView mapView) {
         super.onDetach(mapView);
-    }
-
-    @Override
-    public boolean onFling(MotionEvent pEvent1, MotionEvent pEvent2,
-                           float pVelocityX, float pVelocityY, MapView pMapView) {
-
-        return super.onFling(pEvent1, pEvent2, pVelocityX, pVelocityY, pMapView);
     }
 
     @Override
@@ -83,11 +80,11 @@ public class FastPointCluster extends Overlay {
                 startBoundingBox = mapView.getBoundingBox();
                 startProjection = mapView.getProjection();
 
-                /*final int currentZoomLevel = ((int) mapView.getZoomLevelDouble());
+                int currentZoomLevel = ((int) mapView.getZoomLevelDouble());
                 if (zoomLevel != currentZoomLevel) {
                     zoomLevel = currentZoomLevel;
-                    computeCluster(mapView);
-                }*/
+                    computeClusters(mapView);
+                }
 
                 mapView.invalidate();
 
@@ -142,6 +139,59 @@ public class FastPointCluster extends Overlay {
         }
     }
 
+    private List<IGeoPoint> tempList = new ArrayList<>();
+    private int minClusteringZoomLevel = 6;
+
+    private void computeClusters(MapView mapView) {
+        int radiusInPixels = 100;
+        double radiusInMeters = convertRadiusToMeters(mapView, radiusInPixels);
+
+        clusters.clear();
+        tempList.clear();
+        tempList.addAll(pointList);
+
+        while (!tempList.isEmpty()) {
+            clusters.add(createCluster(tempList, radiusInMeters));
+        }
+    }
+
+    private List<IGeoPoint> createCluster(List<IGeoPoint> container,
+                                          double radiusInMeters) {
+
+        IGeoPoint center = container.get(0);
+        GeoPoint clusterPosition = new GeoPoint(
+                center.getLatitude(),
+                center.getLongitude()
+        );
+
+        List<IGeoPoint> cluster = new ArrayList<>();
+        cluster.add(center);
+        container.remove(center);
+
+        /*if (mapView.getZoomLevelDouble() > maxClusteringZoomLevel) {
+            //above max level => block clustering:
+            return cluster;
+        }*/
+
+        /*if (mapView.getZoomLevelDouble() < minClusteringZoomLevel) {
+            cluster.addAll(cloneList);
+            cloneList.clear();
+            return cluster;
+        }*/
+
+        Iterator<IGeoPoint> it = container.iterator();
+        while (it.hasNext()) {
+            IGeoPoint neighbour = it.next();
+            double distance = clusterPosition.distanceToAsDouble(neighbour);
+            if (distance <= radiusInMeters) {
+                cluster.add(neighbour);
+                it.remove();
+            }
+        }
+
+        return cluster;
+    }
+
     @Override
     public void draw(Canvas canvas, MapView mapView, boolean b) {
         if (b) return;
@@ -151,18 +201,22 @@ public class FastPointCluster extends Overlay {
         // recompute grid only on specific events - only onDraw but when not animating
         // and not in the middle of a touch scroll gesture
 
-        if (gridBool == null) {
-            updateGrid(mapView);
-        }
-
-        final int currentZoomLevel = ((int) mapView.getZoomLevelDouble());
-        if (zoomLevel == 0 || zoomLevel != currentZoomLevel) {
-            zoomLevel = currentZoomLevel;
-            computeCluster(mapView);
-        }
-
+//        if (gridBool == null || (!hasFling && !hasMoved && !mapView.isAnimating()))
 //        if (gridBool == null || (!hasMoved && !mapView.isAnimating()))
 //            computeGrid(mapView);
+
+        startBoundingBox = mapView.getBoundingBox();
+        startProjection = mapView.getProjection();
+        updateGrid(mapView);
+
+//        int currentZoomLevel = (int) mapView.getZoomLevelDouble();
+        if (added /*|| zoomLevel != currentZoomLevel*/) {
+//            zoomLevel = currentZoomLevel;
+            computeClusters(mapView);
+            added = false;
+        }
+
+        Log.d("ZOOM", "zoomLevel: " + mapView.getZoomLevelDouble());
 
         // compute the coordinates of each visible point in the new viewbox
         IGeoPoint nw = new GeoPoint(startBoundingBox.getLatNorth(), startBoundingBox.getLonWest());
@@ -173,10 +227,9 @@ public class FastPointCluster extends Overlay {
         Point dGz = new Point(pSe.x - pStartSe.x, pSe.y - pStartSe.y);
         Point dd = new Point(dGz.x - pNw.x, dGz.y - pNw.y);
         float tx, ty;
-
-        final Point point = new Point();
+        
         // draw points
-
+        final Point point = new Point();
         if (clusters.size() != 1) {
             for (List<IGeoPoint> cluster : clusters) {
                 IGeoPoint pt1 = cluster.get(0);
@@ -207,88 +260,6 @@ public class FastPointCluster extends Overlay {
                 }
             }
         }
-    }
-
-    protected int maxClusteringZoomLevel = 17;
-    protected int minClusteringZoomLevel = 6;
-    protected int mRadiusInPixels = 100;
-    protected double mRadiusInMeters;
-
-    private Thread thread;
-    private List<List<IGeoPoint>> threadList = new ArrayList<>();
-
-    private void computeCluster(MapView mapView) {
-        Toast.makeText(mapView.getContext(), "Start clustering", Toast.LENGTH_SHORT).show();
-
-        if (thread == null) {
-            thread = new Thread(() -> {
-                threadList.clear();
-                cloneList.clear();
-                cloneList.addAll(pointList);
-
-                convertRadiusToMeters(mapView);
-
-                while (!cloneList.isEmpty()) {
-                    IGeoPoint center = cloneList.get(0);
-                    List<IGeoPoint> cluster = createCluster(center, mapView);
-                    threadList.add(cluster);
-                }
-
-                clusters.clear();
-                clusters.addAll(threadList);
-
-                thread = null;
-                mapView.postInvalidate();
-            });
-            thread.start();
-        }
-    }
-
-    private List<IGeoPoint> createCluster(IGeoPoint center, MapView mapView) {
-        GeoPoint clusterPosition = new GeoPoint(center.getLatitude(), center.getLongitude());
-
-        List<IGeoPoint> cluster = new ArrayList<>();
-        cluster.add(center);
-        cloneList.remove(center);
-
-        /*if (mapView.getZoomLevelDouble() > maxClusteringZoomLevel) {
-            //above max level => block clustering:
-            return cluster;
-        }*/
-
-        if (mapView.getZoomLevelDouble() < minClusteringZoomLevel) {
-            cluster.addAll(cloneList);
-            cloneList.clear();
-            return cluster;
-        }
-
-        Iterator<IGeoPoint> it = cloneList.iterator();
-        while (it.hasNext()) {
-            IGeoPoint neighbour = it.next();
-            double distance = clusterPosition.distanceToAsDouble(neighbour);
-            if (distance <= mRadiusInMeters) {
-                cluster.add(neighbour);
-                it.remove();
-            }
-        }
-
-        return cluster;
-    }
-
-    private void convertRadiusToMeters(MapView mapView) {
-
-        Rect mScreenRect = mapView.getIntrinsicScreenRect(null);
-
-        int screenWidth = mScreenRect.right - mScreenRect.left;
-        int screenHeight = mScreenRect.bottom - mScreenRect.top;
-
-        BoundingBox bb = mapView.getBoundingBox();
-
-        double diagonalInMeters = bb.getDiagonalLengthInMeters();
-        double diagonalInPixels = Math.sqrt(screenWidth * screenWidth + screenHeight * screenHeight);
-        double metersInPixel = diagonalInMeters / diagonalInPixels;
-
-        mRadiusInMeters = mRadiusInPixels * metersInPixel;
     }
 
     protected void drawPointAt(Canvas canvas, float x, float y, int count) {
@@ -329,12 +300,27 @@ public class FastPointCluster extends Overlay {
 
             canvas.drawText(String.valueOf(count), x, y, textPaint);
         }
+    }
 
+    private double convertRadiusToMeters(MapView mapView, int radiusInPixels) {
+
+        Rect mScreenRect = mapView.getIntrinsicScreenRect(null);
+
+        int screenWidth = mScreenRect.right - mScreenRect.left;
+        int screenHeight = mScreenRect.bottom - mScreenRect.top;
+
+        BoundingBox bb = mapView.getBoundingBox();
+
+        double diagonalInMeters = bb.getDiagonalLengthInMeters();
+        double diagonalInPixels = Math.sqrt(screenWidth * screenWidth + screenHeight * screenHeight);
+        double metersInPixel = diagonalInMeters / diagonalInPixels;
+
+        return radiusInPixels * metersInPixel;
     }
 
     private BoundingBox findBoundingBox() {
         Double east = null, west = null, north = null, south = null;
-        for (IGeoPoint p : pointList) {
+        for(IGeoPoint p : pointList) {
             if(p == null) continue;
             if(east == null || p.getLongitude() > east) east = p.getLongitude();
             if(west == null || p.getLongitude() < west) west = p.getLongitude();
@@ -342,7 +328,7 @@ public class FastPointCluster extends Overlay {
             if(south == null || p.getLatitude() < south) south = p.getLatitude();
         }
 
-        if (east != null)
+        if(east != null)
             return new BoundingBox(north, east, south, west);
         else
             return null;
@@ -350,10 +336,12 @@ public class FastPointCluster extends Overlay {
 
     public void add(IGeoPoint point) {
         pointList.add(point);
+        added = true;
     }
 
     public void addAll(List<IGeoPoint> pointList) {
         this.pointList.addAll(pointList);
+        added = true;
     }
 
     @Override

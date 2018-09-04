@@ -4,8 +4,6 @@ package com.kiryanov.arcgisproject.Clustering;
  * Created by Evgeniy on 30.08.18.
  */
 
-import android.graphics.Point;
-
 import org.osmdroid.api.IGeoPoint;
 
 import java.util.ArrayList;

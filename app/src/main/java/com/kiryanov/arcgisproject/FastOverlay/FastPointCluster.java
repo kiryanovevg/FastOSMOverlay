@@ -6,15 +6,14 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.os.Handler;
+import android.support.v4.util.ArraySet;
 import android.util.Log;
 import android.view.MotionEvent;
 
+import com.kiryanov.arcgisproject.Clustering.NonHierarchicalDistanceBasedAlgorithm;
+import com.kiryanov.arcgisproject.Clustering.StaticCluster;
+
 import org.osmdroid.api.IGeoPoint;
-import org.osmdroid.events.DelayedMapListener;
-import org.osmdroid.events.MapListener;
-import org.osmdroid.events.ScrollEvent;
-import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
@@ -25,11 +24,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 public class FastPointCluster extends Overlay {
 
     private List<IGeoPoint> pointList;
-    private List<List<IGeoPoint>> clusters;
+    private List<List<IGeoPoint>> clustersList;
     private List<Point> gridIndex;
 
     private int gridWid, gridHei, viewWid, viewHei;
@@ -47,7 +47,7 @@ public class FastPointCluster extends Overlay {
 
     public FastPointCluster(MapView mapView) {
         pointList = new ArrayList<>();
-        clusters = new ArrayList<>();
+        clustersList = new ArrayList<>();
 
         this.boundingBox = findBoundingBox();
 
@@ -146,12 +146,12 @@ public class FastPointCluster extends Overlay {
         int radiusInPixels = 100;
         double radiusInMeters = convertRadiusToMeters(mapView, radiusInPixels);
 
-        clusters.clear();
+        clustersList.clear();
         tempList.clear();
         tempList.addAll(pointList);
 
         while (!tempList.isEmpty()) {
-            clusters.add(createCluster(tempList, radiusInMeters));
+            clustersList.add(createCluster(tempList, radiusInMeters));
         }
     }
 
@@ -170,13 +170,13 @@ public class FastPointCluster extends Overlay {
 
         /*if (mapView.getZoomLevelDouble() > maxClusteringZoomLevel) {
             //above max level => block clustering:
-            return cluster;
+            return algorithm;
         }*/
 
         /*if (mapView.getZoomLevelDouble() < minClusteringZoomLevel) {
-            cluster.addAll(cloneList);
+            algorithm.addAll(cloneList);
             cloneList.clear();
-            return cluster;
+            return algorithm;
         }*/
 
         Iterator<IGeoPoint> it = container.iterator();
@@ -192,7 +192,74 @@ public class FastPointCluster extends Overlay {
         return cluster;
     }
 
+    private NonHierarchicalDistanceBasedAlgorithm<IGeoPoint> algorithm = new NonHierarchicalDistanceBasedAlgorithm<>();
+    private Set clustersSet;
+
     @Override
+    public void draw(Canvas canvas, MapView mapView, boolean shadow) {
+        if (shadow) return;
+
+        Log.d("Zoom", "Zoom level: " + mapView.getZoomLevelDouble());
+
+        int currentZoomLevel = ((int) mapView.getZoomLevelDouble());
+        if (clustersSet == null || zoomLevel != currentZoomLevel) {
+            updateGrid(mapView);
+            if (zoomLevel >= 15) {
+                clustersSet = new ArraySet<IGeoPoint>();
+                clustersSet.addAll(pointList);
+            } else {
+                clustersSet = algorithm.getClusters(zoomLevel);
+            }
+            zoomLevel = currentZoomLevel;
+
+            Log.d("SIZE", "cluster count: " + clustersSet.size());
+        }
+
+        Projection pj = mapView.getProjection();
+
+        IGeoPoint nw = new GeoPoint(startBoundingBox.getLatNorth(), startBoundingBox.getLonWest());
+        IGeoPoint se = new GeoPoint(startBoundingBox.getLatSouth(), startBoundingBox.getLonEast());
+        Point pNw = pj.toPixels(nw, null);
+        Point pSe = pj.toPixels(se, null);
+        Point pStartSe = startProjection.toPixels(se, null);
+        Point dGz = new Point(pSe.x - pStartSe.x, pSe.y - pStartSe.y);
+        Point dd = new Point(dGz.x - pNw.x, dGz.y - pNw.y);
+        float tx, ty;
+
+        final Point point = new Point();
+
+        for (Object obj : clustersSet) {
+//            StaticCluster cluster = ((StaticCluster) obj);
+//            GeoPoint pos = ((GeoPoint) cluster.getPosition());
+
+            GeoPoint pos;
+            int count = 1;
+
+            if (obj instanceof StaticCluster) {
+                StaticCluster cluster = ((StaticCluster) obj);
+                pos = ((GeoPoint) cluster.getPosition());
+                count = cluster.getSize();
+
+//                mapView.getController().setCenter(pos);
+            } else {
+                pos = ((GeoPoint) obj);
+            }
+
+            if (pos.getLatitude() > mapView.getBoundingBox().getLatSouth()
+                    && pos.getLatitude() < mapView.getBoundingBox().getLatNorth()
+                    && pos.getLongitude() > mapView.getBoundingBox().getLonWest()
+                    && pos.getLongitude() < mapView.getBoundingBox().getLonEast()) {
+
+                Utils.coordinateToPixels(viewWid, viewHei, startBoundingBox, pos, point);
+                tx = (point.x * dd.x) / pStartSe.x;
+                ty = (point.y * dd.y) / pStartSe.y;
+
+                drawPointAt(canvas, point.x + pNw.x + tx, point.y + pNw.y + ty, count);
+            }
+        }
+    }
+
+    /*@Override
     public void draw(Canvas canvas, MapView mapView, boolean b) {
         if (b) return;
         final Projection pj = mapView.getProjection();
@@ -209,9 +276,9 @@ public class FastPointCluster extends Overlay {
         startProjection = mapView.getProjection();
         updateGrid(mapView);
 
-//        int currentZoomLevel = (int) mapView.getZoomLevelDouble();
-        if (added /*|| zoomLevel != currentZoomLevel*/) {
-//            zoomLevel = currentZoomLevel;
+        int currentZoomLevel = (int) mapView.getZoomLevelDouble();
+        if (added *//*|| zoomLevel != currentZoomLevel*//*) {
+            zoomLevel = currentZoomLevel;
             computeClusters(mapView);
             added = false;
         }
@@ -230,9 +297,9 @@ public class FastPointCluster extends Overlay {
         
         // draw points
         final Point point = new Point();
-        if (clusters.size() != 1) {
-            for (List<IGeoPoint> cluster : clusters) {
-                IGeoPoint pt1 = cluster.get(0);
+        if (clustersList.size() != 1) {
+            for (List<IGeoPoint> algorithm : clustersList) {
+                IGeoPoint pt1 = algorithm.get(0);
                 if (pt1.getLatitude() > mapView.getBoundingBox().getLatSouth()
                         && pt1.getLatitude() < mapView.getBoundingBox().getLatNorth()
                         && pt1.getLongitude() > mapView.getBoundingBox().getLonWest()
@@ -242,11 +309,11 @@ public class FastPointCluster extends Overlay {
                     tx = (point.x * dd.x) / pStartSe.x;
                     ty = (point.y * dd.y) / pStartSe.y;
 
-                    drawPointAt(canvas, point.x + pNw.x + tx, point.y + pNw.y + ty, cluster.size());
+                    drawPointAt(canvas, point.x + pNw.x + tx, point.y + pNw.y + ty, algorithm.size());
                 }
             }
         } else {
-            for (IGeoPoint pt1 : clusters.get(0)) {
+            for (IGeoPoint pt1 : clustersList.get(0)) {
                 if (pt1.getLatitude() > mapView.getBoundingBox().getLatSouth()
                         && pt1.getLatitude() < mapView.getBoundingBox().getLatNorth()
                         && pt1.getLongitude() > mapView.getBoundingBox().getLonWest()
@@ -260,7 +327,7 @@ public class FastPointCluster extends Overlay {
                 }
             }
         }
-    }
+    }*/
 
     protected void drawPointAt(Canvas canvas, float x, float y, int count) {
         /*if (icon != null) {
@@ -335,11 +402,15 @@ public class FastPointCluster extends Overlay {
     }
 
     public void add(IGeoPoint point) {
+        algorithm.addItem(point);
+
         pointList.add(point);
         added = true;
     }
 
     public void addAll(List<IGeoPoint> pointList) {
+        algorithm.addItems(pointList);
+
         this.pointList.addAll(pointList);
         added = true;
     }

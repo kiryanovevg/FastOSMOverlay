@@ -1,7 +1,5 @@
 package com.kiryanov.arcgisproject.Clustering;
 
-import android.graphics.Point;
-
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.util.GeoPoint;
 
@@ -22,7 +20,7 @@ public class SphericalMercatorProjection {
         final double siny = Math.sin(Math.toRadians(latLng.getLatitude()));
         final double y = 0.5 * Math.log((1 + siny) / (1 - siny)) / -(2 * Math.PI) + .5;
 
-        return new Point((int) (x * mWorldWidth), (int) (y * mWorldWidth));
+        return new Point(x * mWorldWidth, y * mWorldWidth);
     }
 
     public IGeoPoint toLatLng(Point point) {

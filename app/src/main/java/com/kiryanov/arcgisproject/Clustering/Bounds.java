@@ -1,7 +1,5 @@
 package com.kiryanov.arcgisproject.Clustering;
 
-import android.graphics.Point;
-
 /**
  * Created by Evgeniy on 31.08.18.
  */

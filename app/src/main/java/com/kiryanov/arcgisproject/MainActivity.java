@@ -98,8 +98,6 @@ public class MainActivity extends AppCompatActivity {
         fastPointCluster.add(new GeoPoint(lat, lng));
     }
 
-    NonHierarchicalDistanceBasedAlgorithm<IGeoPoint> cluster = new NonHierarchicalDistanceBasedAlgorithm<>();
-
     private void addPointsFromGeoJson() {
         Repository.getInstance().getPointsFromGeoJson(this)
                 .subscribe(new Observer<List<IGeoPoint>>() {
@@ -110,9 +108,7 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onNext(List<IGeoPoint> pointList) {
-                        cluster.addItems(pointList);
-
-//                        fastPointCluster.addAll(pointList);
+                        fastPointCluster.addAll(pointList);
                         setButtonText(btnPolygons, pointList.size());
                     }
 
@@ -133,9 +129,7 @@ public class MainActivity extends AppCompatActivity {
     private void invalidateMap() {
 //        mapView.getOverlays().clear();
 
-        /*mapView.invalidate();*/
-        double zoomLevel = mapView.getZoomLevelDouble();
-        Set set = cluster.getClusters(zoomLevel);
+        mapView.invalidate();
 
 //        btnPoints.setText("0");
 //        btnPolygons.setText("0");

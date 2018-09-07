@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnPoints;
     private Button btnPolygons;
     private Button btnInvalidate;
+    private Button btnNext;
 
 //    private List<IGeoPoint> geoPoints = new ArrayList<>();
 //    private FastPointOverlay fastPointOverlay;
@@ -51,10 +52,12 @@ public class MainActivity extends AppCompatActivity {
         btnPoints = findViewById(R.id.btn_points);
         btnPolygons = findViewById(R.id.btn_polygons);
         btnInvalidate = findViewById(R.id.btn_invalidate);
+        btnNext = findViewById(R.id.btn_next);
 
         btnPoints.setOnClickListener(v -> addPoints());
         btnPolygons.setOnClickListener(v -> addPointsFromGeoJson());
         btnInvalidate.setOnClickListener(v -> invalidateMap());
+        btnNext.setOnClickListener(v -> {});
 
         initMapView(savedInstanceState);
     }

@@ -30,4 +30,13 @@ public class Utils {
 
         mPositionPixels.set(px, viewHei - py);
     }
+
+    public static Point coordinateToPixels(int viewWid, int viewHei,
+                                          BoundingBox viewBBox,
+                                          IGeoPoint pt1) {
+        Point point = new Point();
+        coordinateToPixels(viewWid, viewHei, viewBBox, pt1, point);
+
+        return point;
+    }
 }

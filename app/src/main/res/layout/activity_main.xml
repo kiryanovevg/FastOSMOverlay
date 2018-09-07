@@ -56,6 +56,16 @@
             />
 
         <Button
+            android:id="@+id/btn_next"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="#b6b6b6"
+            android:textColor="#000"
+            android:text="NEXT"
+            android:visibility="visible"
+            />
+
+        <Button
             android:id="@+id/btn_invalidate"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"

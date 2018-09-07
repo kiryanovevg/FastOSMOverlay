@@ -117,7 +117,7 @@ public class Repository {
                     return geoPoints;
                 })
                 .flatMap(Observable::fromIterable)
-                .buffer(10000).take(2);
+                .buffer(10000).take(4);
 
 
         Observable<Long> interval = Observable.interval(0, TimeUnit.MILLISECONDS);

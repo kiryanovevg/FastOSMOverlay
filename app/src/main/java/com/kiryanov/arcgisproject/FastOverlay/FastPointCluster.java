@@ -7,7 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.view.MotionEvent;
 
-import com.kiryanov.arcgisproject.Clustering.NonHierarchicalDistanceBasedAlgorithm;
+import com.kiryanov.arcgisproject.Clustering.ClusteringAlgorithm;
 import com.kiryanov.arcgisproject.Clustering.StaticCluster;
 
 import org.osmdroid.api.IGeoPoint;
@@ -27,7 +27,7 @@ import io.reactivex.schedulers.Schedulers;
 
 public class FastPointCluster extends Overlay {
     
-    private NonHierarchicalDistanceBasedAlgorithm<IGeoPoint> algorithm;
+    private ClusteringAlgorithm<IGeoPoint> algorithm;
     private Set clusters;
 
     private int zoomLevel;
@@ -41,7 +41,7 @@ public class FastPointCluster extends Overlay {
     private int cellSize = 10;
 
     public FastPointCluster(MapView mapView) {
-        algorithm = new NonHierarchicalDistanceBasedAlgorithm<>();
+        algorithm = new ClusteringAlgorithm<>();
         boundingBox = findBoundingBox();
 
         cellSize = icon == null

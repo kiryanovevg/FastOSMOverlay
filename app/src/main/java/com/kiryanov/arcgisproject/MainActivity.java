@@ -9,16 +9,14 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.kiryanov.arcgisproject.Clustering.NonHierarchicalDistanceBasedAlgorithm;
-import com.kiryanov.arcgisproject.FastOverlay.FastPointCluster;
 import com.kiryanov.arcgisproject.FastOverlay.FastPointOverlay;
+import com.kiryanov.arcgisproject.Overlay.CustomOverlay;
 
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 
 import java.util.List;
-import java.util.Set;
 
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
@@ -39,7 +37,8 @@ public class MainActivity extends AppCompatActivity {
 
 //    private List<IGeoPoint> geoPoints = new ArrayList<>();
 //    private FastPointOverlay fastPointOverlay;
-    private FastPointCluster fastPointCluster;
+//    private FastPointCluster fastPointCluster;
+    private CustomOverlay customOverlay;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         btnPoints.setOnClickListener(v -> addPoints());
         btnPolygons.setOnClickListener(v -> addPointsFromGeoJson());
         btnInvalidate.setOnClickListener(v -> invalidateMap());
-        btnNext.setOnClickListener(v -> {});
+        btnNext.setOnClickListener(v -> customOverlay.setIcon(((BitmapDrawable) getResources().getDrawable(R.drawable.direction_arrow)).getBitmap()));
 
         initMapView(savedInstanceState);
     }
@@ -70,15 +69,22 @@ public class MainActivity extends AppCompatActivity {
         mapView.getController().setZoom(8d);
         mapView.getController().setCenter(new GeoPoint(LAT, LNG));
 
+        ///***///
+
 //        fastPointOverlay = new FastPointOverlay(mapView);
 //        fastPointOverlay.setIcon(
 //                ((BitmapDrawable) getResources().getDrawable(R.drawable.direction_arrow)).getBitmap()
 //        );
 
-        fastPointCluster = new FastPointCluster(mapView);
+//        fastPointCluster = new FastPointCluster(mapView);
 
+        customOverlay = new CustomOverlay();
+
+        ///***///
+
+        mapView.getOverlays().add(customOverlay);
 //        mapView.getOverlays().add(fastPointOverlay);
-        mapView.getOverlays().add(fastPointCluster);
+//        mapView.getOverlays().add(fastPointCluster);
     }
 
     private void addPoints() {
@@ -97,8 +103,9 @@ public class MainActivity extends AppCompatActivity {
                 lat, lng
         ));*/
 
-//        geoPoints.add(new GeoPoint(lat, lng));
-        fastPointCluster.add(new GeoPoint(lat, lng));
+        customOverlay.add(new GeoPoint(lat, lng));
+//        fastPointOverlay.add(new GeoPoint(lat, lng));
+//        fastPointCluster.add(new GeoPoint(lat, lng));
     }
 
     private void addPointsFromGeoJson() {
@@ -111,7 +118,9 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onNext(List<IGeoPoint> pointList) {
-                        fastPointCluster.addAll(pointList);
+                        customOverlay.addAll(pointList);
+//                        fastPointOverlay.addAll(pointList);
+//                        fastPointCluster.addAll(pointList);
                         setButtonText(btnPolygons, pointList.size());
                     }
 

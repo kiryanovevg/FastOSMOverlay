@@ -28,7 +28,7 @@ import java.util.Set;
  * <p/>
  * Clusters have the center of the first element (not the centroid of the items within it).
  */
-public class NonHierarchicalDistanceBasedAlgorithm<T extends IGeoPoint> implements Algorithm<T> {
+public class ClusteringAlgorithm<T extends IGeoPoint> {
     public static final int MAX_DISTANCE_AT_ZOOM = 100; // essentially 100 dp.
 
     /**
@@ -66,7 +66,7 @@ public class NonHierarchicalDistanceBasedAlgorithm<T extends IGeoPoint> implemen
 
     public void removeItem(T item) {
         // TODO: delegate QuadItem#hashCode and QuadItem#equals to its item.
-        throw new UnsupportedOperationException("NonHierarchicalDistanceBasedAlgorithm.remove not implemented");
+        throw new UnsupportedOperationException("ClusteringAlgorithm.remove not implemented");
     }
 
     public Set<? extends Cluster<T>> getClusters(double zoom) {

@@ -1,6 +1,5 @@
 package com.kiryanov.arcgisproject;
 
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
@@ -10,8 +9,6 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.kiryanov.arcgisproject.FastOverlay.FastPointCluster;
-import com.kiryanov.arcgisproject.FastOverlay.FastPointOverlay;
-import com.kiryanov.arcgisproject.Overlay.CustomOverlay;
 
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.util.GeoPoint;
@@ -77,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 //                ((BitmapDrawable) getResources().getDrawable(R.drawable.direction_arrow)).getBitmap()
 //        );
 
-        fastPointCluster = new FastPointCluster(mapView);
+        fastPointCluster = new FastPointCluster();
 
 //        customOverlay = new CustomOverlay();
 

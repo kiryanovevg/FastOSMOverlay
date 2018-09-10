@@ -49,7 +49,7 @@ public class FastPointCluster extends Overlay {
 
     public static final String TAG = "FastPointCluster";
 
-    public FastPointCluster(MapView mapView) {
+    public FastPointCluster() {
         algorithm = new ClusteringAlgorithm<>();
         boundingBox = findBoundingBox();
 
